@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { upload } from "../config/multer.config";
+import { upload } from "../middleware/cloudinary.middleware";
 import {
   uploadSingleFile,
   uploadMultipleFiles,

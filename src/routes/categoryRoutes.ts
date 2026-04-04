@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getCategories, createCategory, deleteCategory } from '../controllers/categoryController';
 import { protect } from '../middleware/authMiddleware';
 import { authorizeRoles } from '../middleware/authorize';
-import { upload } from '../config/multer.config';
+import { upload } from "../middleware/cloudinary.middleware";
 
 const router = Router();
 

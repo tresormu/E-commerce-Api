@@ -12,7 +12,7 @@ import {
   deleteusers,
 } from "../controllers/authController";
 import { protect } from "../middleware/authMiddleware";
-import { upload } from "../config/multer.config";
+import { upload } from "../middleware/cloudinary.middleware";
 const router = Router();
 router.post("/register",upload.single("image"), register);
 router.post("/login", login);

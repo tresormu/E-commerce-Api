@@ -14,11 +14,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User";
 import { AuthRequest } from "../models/type";
-import dotenv from "dotenv";
 import crypto from "crypto";
-import cloudinary from "../config/claudinary.config";
-import { profile } from "console";
-dotenv.config();
 /**
  * @swagger
  * /api/auth/register:
@@ -74,8 +70,7 @@ export const register = async (req: Request, res: Response) => {
     }
     let imageUrl = "";
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
-      imageUrl = result.secure_url;
+      imageUrl = req.file.path;
     }
     const user = await User.create({
       username,
@@ -84,7 +79,7 @@ export const register = async (req: Request, res: Response) => {
       UserType: UserType || "customer",
       profile: imageUrl,
     });
-    sendWelcomeEmail(email, username).catch((err) => {
+    sendWelcomeEmail(email, username).catch((err: unknown) => {
       console.error("Failed to send welcome email:", err);
       // Don't fail registration if email fails
     });
@@ -183,7 +178,7 @@ export const login = async (req: Request, res: Response) => {
     const token = jwt.sign(
       { id: user._id, role: user.UserType },
       process.env.JWT_SECRET!,
-      { expiresIn: "1d" },
+      { expiresIn: "7d" },
     );
 
     res.json({
@@ -297,8 +292,7 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
     // Handle profile image upload
     let imageUrl = user.profile;
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
-      imageUrl = result.secure_url;
+      imageUrl = req.file.path;
     }
 
     // Update user fields

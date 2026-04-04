@@ -10,8 +10,8 @@ const claudinary_config_1 = __importDefault(require("../config/claudinary.config
 const storage = new multer_storage_cloudinary_1.CloudinaryStorage({
     cloudinary: claudinary_config_1.default,
     params: async () => ({
-        folder: "products",
-        allowed_formats: ["jpg", "jpeg", "png"],
+        folder: "uploads",
+        allowed_formats: ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx"],
     }),
 });
 exports.upload = (0, multer_1.default)({

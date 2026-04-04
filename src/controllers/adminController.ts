@@ -5,7 +5,6 @@ import User from "../models/User";
 import Order from "../models/orders";
 import Category from "../models/Categories";
 import mongoose from "mongoose";
-import cloudinary from "../config/claudinary.config";
 
 export const getDashboardStats = async (req: AuthRequest, res: Response) => {
   try {
@@ -202,8 +201,7 @@ export const createAdminProduct = async (req: AuthRequest, res: Response) => {
     const Images: string[] = [];
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files as any[]) {
-        const imageUrl = await cloudinary.uploader.upload(file.path);
-        Images.push(imageUrl.secure_url);
+        Images.push(file.path);
       }
     }
 

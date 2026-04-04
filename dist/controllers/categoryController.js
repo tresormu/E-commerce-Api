@@ -11,9 +11,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteCategory = exports.createCategory = exports.getCategories = void 0;
 const Categories_1 = __importDefault(require("../models/Categories"));
-const claudinary_config_1 = __importDefault(require("../config/claudinary.config"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
 /**
  * @swagger
  * /api/categories:
@@ -59,8 +56,7 @@ const createCategory = async (req, res) => {
         }
         let imageUrl = "";
         if (req.file) {
-            const result = await claudinary_config_1.default.uploader.upload(req.file.path);
-            imageUrl = result.secure_url;
+            imageUrl = req.file.path;
         }
         const category = await Categories_1.default.create({
             name,

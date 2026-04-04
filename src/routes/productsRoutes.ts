@@ -9,7 +9,7 @@ import {
 } from "../controllers/productController";
 import { protect } from "../middleware/authMiddleware";
 import { authorizeRoles } from "../middleware/authorize";
-import { upload } from "../config/multer.config";
+import { upload } from "../middleware/cloudinary.middleware";
 
 const router = Router();
 

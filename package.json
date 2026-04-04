@@ -7,6 +7,8 @@
     "dev": "nodemon --watch src --ext ts --exec tsx src/server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
+    "migrate:uploads": "tsx scripts/migrate-uploads-to-cloudinary.ts",
+    "migrate:db": "tsx scripts/migrate-mongo-all.ts",
     "test": ""
   },
   "keywords": [
@@ -22,6 +24,7 @@
     "cloudinary": "^1.41.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.0.0",
     "mongoose": "^9.1.3",

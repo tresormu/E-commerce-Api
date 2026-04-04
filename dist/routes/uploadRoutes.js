@@ -1,10 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const multer_config_1 = require("../config/multer.config");
+const cloudinary_middleware_1 = require("../middleware/cloudinary.middleware");
 const upload_controller_1 = require("../controllers/upload.controller");
 const authMiddleware_1 = require("../middleware/authMiddleware");
 const router = (0, express_1.Router)();
-router.post("/single", authMiddleware_1.protect, multer_config_1.upload.single("image"), upload_controller_1.uploadSingleFile);
-router.post("/multiple", authMiddleware_1.protect, multer_config_1.upload.array("images", 4), upload_controller_1.uploadMultipleFiles);
+router.post("/single", authMiddleware_1.protect, cloudinary_middleware_1.upload.single("image"), upload_controller_1.uploadSingleFile);
+router.post("/multiple", authMiddleware_1.protect, cloudinary_middleware_1.upload.array("images", 4), upload_controller_1.uploadMultipleFiles);
 exports.default = router;

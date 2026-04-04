@@ -9,7 +9,6 @@ const User_1 = __importDefault(require("../models/User"));
 const orders_1 = __importDefault(require("../models/orders"));
 const Categories_1 = __importDefault(require("../models/Categories"));
 const mongoose_1 = __importDefault(require("mongoose"));
-const claudinary_config_1 = __importDefault(require("../config/claudinary.config"));
 const getDashboardStats = async (req, res) => {
     try {
         const totalProducts = await Product_1.default.countDocuments();
@@ -190,8 +189,7 @@ const createAdminProduct = async (req, res) => {
         const Images = [];
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
-                const imageUrl = await claudinary_config_1.default.uploader.upload(file.path);
-                Images.push(imageUrl.secure_url);
+                Images.push(file.path);
             }
         }
         // Create product with default admin user (you may want to modify this)

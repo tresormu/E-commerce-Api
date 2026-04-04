@@ -15,7 +15,7 @@ const uploadSingleFile = (req, res) => {
             mimetype: req.file.mimetype,
             size: req.file.size,
             path: req.file.path,
-            url: `/uploads/${req.file.filename}`,
+            url: req.file.path,
         };
         return res.status(200).json({
             success: true,
@@ -33,13 +33,20 @@ const uploadSingleFile = (req, res) => {
 };
 exports.uploadSingleFile = uploadSingleFile;
 const uploadMultipleFiles = (req, res) => {
-    const files = req.file;
+    const files = req.files;
     if (!files || files.length === 0) {
         return res.status(400).json({ message: "No files uploaded" });
     }
     res.status(200).json({
         message: "Files uploaded successfully",
-        files,
+        files: files.map((file) => ({
+            filename: file.filename,
+            originalName: file.originalname,
+            mimetype: file.mimetype,
+            size: file.size,
+            path: file.path,
+            url: file.path,
+        })),
     });
 };
 exports.uploadMultipleFiles = uploadMultipleFiles;

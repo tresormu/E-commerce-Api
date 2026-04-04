@@ -10,9 +10,6 @@ import mongoose from "mongoose";
 import Product from "../models/Product";
 import Category from "../models/Categories";
 import { AuthRequest } from "../models/type";
-import dotenv from "dotenv";
-import cloudinary from "../config/cloudinary.config";
-dotenv.config();
 
 /**
  * @swagger
@@ -78,8 +75,7 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
     const Images: any[] = [];
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files as any[]) {
-        const imageUrl = await cloudinary.uploader.upload(file.path);
-        Images.push(imageUrl.secure_url);
+        Images.push(file.path);
       }
     }
     

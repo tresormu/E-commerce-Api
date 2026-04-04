@@ -58,7 +58,7 @@ export const addVendorProduct = async (req: AuthRequest, res: Response) => {
     const Images: string[] = [];
     if (req.files && Array.isArray(req.files)) {
       req.files.forEach((file: any) => {
-        Images.push(`/uploads/${file.filename}`);
+        Images.push(file.path);
       });
     }
     
@@ -101,10 +101,33 @@ export const updateVendorProduct = async (req: AuthRequest, res: Response) => {
   try {
     const { productId } = req.params;
     const vendorId = req.user?.id;
+    const { name, description, price, stock, category } = req.body;
+    
+    // Find category by name to get ObjectId if category is provided
+    let categoryId;
+    if (category) {
+      const Category = (await import('../models/Categories')).default;
+      const categoryDoc = await Category.findOne({ name: category });
+      if (!categoryDoc) {
+        return res.status(400).json({ message: `Category '${category}' not found` });
+      }
+      categoryId = categoryDoc._id;
+    }
+    
+    const updateData: any = {
+      name,
+      description,
+      price: parseFloat(price),
+      stock: parseInt(stock),
+    };
+    
+    if (categoryId) {
+      updateData.category = categoryId;
+    }
     
     const product = await Product.findOneAndUpdate(
       { _id: productId, vendorId },
-      req.body,
+      updateData,
       { new: true }
     );
     
@@ -113,8 +136,9 @@ export const updateVendorProduct = async (req: AuthRequest, res: Response) => {
     }
     
     res.json({ message: "Product updated successfully", product });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to update product", error });
+  } catch (error: any) {
+    console.error('Update product error:', error);
+    res.status(500).json({ message: "Failed to update product", error: error.message });
   }
 };
 
@@ -124,6 +148,8 @@ export const deleteVendorProduct = async (req: AuthRequest, res: Response) => {
     const { productId } = req.params;
     const vendorId = req.user?.id;
     
+    console.log('Delete request:', { productId, vendorId });
+    
     const product = await Product.findOneAndDelete({ _id: productId, vendorId });
     
     if (!product) {
@@ -131,7 +157,8 @@ export const deleteVendorProduct = async (req: AuthRequest, res: Response) => {
     }
     
     res.json({ message: "Product deleted successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to delete product", error });
+  } catch (error: any) {
+    console.error('Delete product error:', error);
+    res.status(500).json({ message: "Failed to delete product", error: error.message });
   }
 };

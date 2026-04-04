@@ -11,24 +11,16 @@ import {
   getAnalytics,
   createAdminProduct
 } from "../controllers/adminController";
-import { upload } from "../config/multer.config";
+import { upload } from "../middleware/cloudinary.middleware";
 
 const router = Router();
 
-// Dashboard (no auth for testing)
 router.get("/stats", getDashboardStats);
 router.get("/analytics", getAnalytics);
-
-// Orders (no auth for testing)
 router.get("/orders", getAdminOrders);
-
-// Products (no auth for testing)
 router.get("/products/top", getTopProducts);
-
-// Customers (no auth for testing)
 router.get("/customers", getCustomers);
 
-// Campaigns (no auth for testing)
 router.get("/campaigns", getCampaigns);
 router.post("/campaigns", addCampaign);
 

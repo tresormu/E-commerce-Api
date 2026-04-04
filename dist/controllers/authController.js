@@ -14,10 +14,7 @@ const emailServices_1 = require("../services/emailServices");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
-const dotenv_1 = __importDefault(require("dotenv"));
 const crypto_1 = __importDefault(require("crypto"));
-const claudinary_config_1 = __importDefault(require("../config/claudinary.config"));
-dotenv_1.default.config();
 /**
  * @swagger
  * /api/auth/register:
@@ -72,8 +69,7 @@ const register = async (req, res) => {
         }
         let imageUrl = "";
         if (req.file) {
-            const result = await claudinary_config_1.default.uploader.upload(req.file.path);
-            imageUrl = result.secure_url;
+            imageUrl = req.file.path;
         }
         const user = await User_1.default.create({
             username,
@@ -178,7 +174,7 @@ const login = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
-        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.UserType }, process.env.JWT_SECRET, { expiresIn: "1d" });
+        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.UserType }, process.env.JWT_SECRET, { expiresIn: "7d" });
         res.json({
             message: "Login successful",
             token,
@@ -289,8 +285,7 @@ const updateUser = async (req, res) => {
         // Handle profile image upload
         let imageUrl = user.profile;
         if (req.file) {
-            const result = await claudinary_config_1.default.uploader.upload(req.file.path);
-            imageUrl = result.secure_url;
+            imageUrl = req.file.path;
         }
         // Update user fields
         if (username)

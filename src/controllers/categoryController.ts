@@ -7,9 +7,6 @@
 
 import { Request, Response } from "express";
 import Category from "../models/Categories";
-import cloudinary from "../config/claudinary.config";
-import dotenv from "dotenv";
-dotenv.config();
 
 /**
  * @swagger
@@ -58,8 +55,7 @@ export const createCategory = async (req: Request, res: Response) => {
 
     let imageUrl = "";
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
-      imageUrl = result.secure_url;
+      imageUrl = req.file.path;
     }
 
     const category = await Category.create({ 

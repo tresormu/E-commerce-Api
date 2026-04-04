@@ -10,19 +10,42 @@ import orderRoutes from "./routes/ordersRoutes";
 import UploadRoutes from "./routes/uploadRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import vendorRoutes from "./routes/vendorRoutes";
-import path from "path";
 import cors from "cors";
+import helmet from "helmet";
 
 import dotenv from "dotenv";
 dotenv.config();
-const MONGO_URL: string = process.env.MONGO_URL || "mongodb+srv://admin:DfET6Bc.Zyc9cLv@cluster12.etcfeji.mongodb.net/?appName=Cluster12";
-console.log("Using MONGO_URL:", MONGO_URL);
+
+const requireEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
+};
+
+const MONGO_URL: string = requireEnv("MONGO_URL");
+requireEnv("JWT_SECRET");
+requireEnv("CLOUDINARY_CLOUD_NAME");
+requireEnv("CLOUDINARY_API_KEY");
+requireEnv("CLOUDINARY_API_SECRET");
+requireEnv("EMAIL_HOST");
+requireEnv("EMAIL_PORT");
+requireEnv("EMAIL_USER");
+requireEnv("EMAIL_PASSWORD");
+requireEnv("EMAIL_FROM");
+
 const app = express();
 const PORT = process.env.PORT || 9000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cors());
-
+app.use(helmet());
+app.use(
+  cors({
+    origin: ["https://full-ecommerce-sigma.vercel.app"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  }),
+);
 app.use(
   "/api-docs",
   swaggerUi.serve,
@@ -31,7 +54,6 @@ app.use(
     customSiteTitle: "Product API Docs",
   }),
 );
-app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 mongoose
   .connect(MONGO_URL)

@@ -1,4 +1,4 @@
-import Express, { Request, Response } from "express";
+import { Response } from "express";
 import { AuthRequest } from "../models/type";
 export const uploadSingleFile = (req: AuthRequest, res: Response) => {
   try {
@@ -14,7 +14,7 @@ export const uploadSingleFile = (req: AuthRequest, res: Response) => {
       mimetype: req.file.mimetype,
       size: req.file.size,
       path: req.file.path,
-      url: `/uploads/${req.file.filename}`,
+      url: req.file.path,
     };
 
     return res.status(200).json({
@@ -31,12 +31,19 @@ export const uploadSingleFile = (req: AuthRequest, res: Response) => {
   }
 };
 export const uploadMultipleFiles = (req: AuthRequest, res: Response) => {
-  const files = req.file as any;
+  const files = req.files as Express.Multer.File[] | undefined;
   if (!files || files.length === 0) {
     return res.status(400).json({ message: "No files uploaded" });
   }
   res.status(200).json({
     message: "Files uploaded successfully",
-    files,
+    files: files.map((file) => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      mimetype: file.mimetype,
+      size: file.size,
+      path: file.path,
+      url: file.path,
+    })),
   });
 };

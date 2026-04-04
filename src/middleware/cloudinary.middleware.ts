@@ -5,8 +5,8 @@ import cloudinary from "../config/claudinary.config";
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async () => ({
-    folder: "products",
-    allowed_formats: ["jpg", "jpeg", "png"],
+    folder: "uploads",
+    allowed_formats: ["jpg", "jpeg", "png", "gif", "pdf", "doc", "docx"],
   }),
 });
 

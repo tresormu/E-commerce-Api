@@ -13,9 +13,6 @@ exports.deleteProducts = exports.getProduct = exports.deleteProduct = exports.up
 const mongoose_1 = __importDefault(require("mongoose"));
 const Product_1 = __importDefault(require("../models/Product"));
 const Categories_1 = __importDefault(require("../models/Categories"));
-const dotenv_1 = __importDefault(require("dotenv"));
-const cloudinary_config_1 = __importDefault(require("../config/cloudinary.config"));
-dotenv_1.default.config();
 /**
  * @swagger
  * /api/products:
@@ -78,8 +75,7 @@ const createProduct = async (req, res) => {
         const Images = [];
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
-                const imageUrl = await cloudinary_config_1.default.uploader.upload(file.path);
-                Images.push(imageUrl.secure_url);
+                Images.push(file.path);
             }
         }
         const exists = await Categories_1.default.findById(category);
