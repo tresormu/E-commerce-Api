@@ -1,18 +1,61 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
+import {
+  welcomeEmailTemplate,
+  passwordResetTemplate,
+  orderConfirmationTemplate,
+  orderCancellationTemplate,
+  orderPaymentSuccessTemplate,
+  orderPaymentFailedTemplate,
+} from "../utils/emailTemplate";
 
 dotenv.config();
 
-export const transporter =
-  process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
-    ? nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASSWORD,
-        },
-      })
-    : null;
+const getTransporter = () => {
+  const host = process.env.EMAIL_HOST;
+  const port = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
+  const secure =
+    process.env.EMAIL_SECURE === "true" || (port !== undefined && port === 465);
+
+  if (host && port) {
+    return nodemailer.createTransport({
+      host,
+      port,
+      secure,
+      auth:
+        process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
+          ? {
+              user: process.env.EMAIL_USER,
+              pass: process.env.EMAIL_PASSWORD,
+            }
+          : undefined,
+    });
+  }
+
+  if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    return nodemailer.createTransport({
+      service: process.env.EMAIL_SERVICE,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+  }
+
+  if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    return nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+  }
+
+  return null;
+};
+
+export const transporter = getTransporter();
 
 if (transporter) {
   transporter.verify((error) => {
@@ -32,44 +75,58 @@ const send = (to: string, subject: string, html: string) => {
 };
 
 export const sendWelcomeEmail = (email: string, username: string) =>
-  send(
-    email,
-    "Welcome!",
-    `<p>Hi <strong>${username}</strong>, welcome to our platform!</p>`
-  );
+  send(email, "Welcome!", welcomeEmailTemplate(username, email));
 
-export const sendPasswordResetEmail = (email: string, username: string, token: string) =>
-  send(
-    email,
-    "Password Reset Request",
-    `<p>Hi <strong>${username}</strong>,</p>
-     <p>Use this token to reset your password: <strong>${token}</strong></p>
-     <p>This token expires in 1 hour.</p>`
-  );
+export const sendPasswordResetEmail = (
+  email: string,
+  username: string,
+  token: string,
+) => send(email, "Password Reset Request", passwordResetTemplate(username, token));
 
 export const sendOrderConfirmationEmail = (
   email: string,
   username: string,
   orderId: string,
-  totalAmount: number
+  totalAmount: number,
 ) =>
   send(
     email,
     "Order Confirmation",
-    `<p>Hi <strong>${username}</strong>,</p>
-     <p>Your order <strong>${orderId}</strong> has been placed successfully.</p>
-     <p>Total: <strong>$${totalAmount.toFixed(2)}</strong></p>`
+    orderConfirmationTemplate(username, orderId, totalAmount),
   );
 
 export const sendOrderCancellationEmail = (
   email: string,
   username: string,
   orderId: string,
-  cancelledBy: string
+  cancelledBy: string,
 ) =>
   send(
     email,
     "Order Cancelled",
-    `<p>Hi <strong>${username}</strong>,</p>
-     <p>Your order <strong>${orderId}</strong> has been cancelled by <strong>${cancelledBy}</strong>.</p>`
+    orderCancellationTemplate(username, orderId, cancelledBy),
+  );
+
+export const sendOrderPaymentSuccessEmail = (
+  email: string,
+  username: string,
+  orderId: string,
+  totalAmount: number,
+) =>
+  send(
+    email,
+    "Payment Successful",
+    orderPaymentSuccessTemplate(username, orderId, totalAmount),
+  );
+
+export const sendOrderPaymentFailedEmail = (
+  email: string,
+  username: string,
+  orderId: string,
+  totalAmount: number,
+) =>
+  send(
+    email,
+    "Payment Failed",
+    orderPaymentFailedTemplate(username, orderId, totalAmount),
   );

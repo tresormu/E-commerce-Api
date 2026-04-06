@@ -15,6 +15,7 @@ const ordersRoutes_1 = __importDefault(require("./routes/ordersRoutes"));
 const uploadRoutes_1 = __importDefault(require("./routes/uploadRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const vendorRoutes_1 = __importDefault(require("./routes/vendorRoutes"));
+const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const dotenv_1 = __importDefault(require("dotenv"));
@@ -42,7 +43,9 @@ app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
-    origin: ["https://full-ecommerce-sigma.vercel.app"],
+    origin: ["https://full-ecommerce-sigma.vercel.app",
+        "http://localhost:5173"
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 }));
 app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_config_1.default, {
@@ -58,6 +61,7 @@ app.use("/api/categories", categoryRoutes_1.default);
 app.use("/api/cart", cartRoutes_1.default);
 app.use("/api/auth", authRoutes_1.default);
 app.use("/api/orders", ordersRoutes_1.default);
+app.use("/api/payment", paymentRoutes_1.default);
 app.use("/api/upload", uploadRoutes_1.default);
 app.use("/api/admin", adminRoutes_1.default);
 app.use("/api/vendor", vendorRoutes_1.default);

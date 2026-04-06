@@ -3,6 +3,9 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IProduct extends Document {
   name: string;
   price: number;
+  priceUSD: number;
+  priceEUR: number;
+  priceRWF: number;
   oldPrice?: number;
   description?: string;
   size?: "X" | "S" | "M" | "L" | "XL" | "XXL";
@@ -18,6 +21,9 @@ export interface IProduct extends Document {
 const ProductSchema = new Schema<IProduct>({
   name: { type: String, required: true },
   price: { type: Number, required: true },
+  priceUSD: { type: Number, required: true },
+  priceEUR: { type: Number, required: true },
+  priceRWF: { type: Number, required: true },
   size: { type: String, enum: ["X", "S", "M", "L", "XL", "XXL"] },
   oldPrice: { type: Number },
   description: { type: String },

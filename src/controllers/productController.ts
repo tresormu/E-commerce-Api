@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import Product from "../models/Product";
 import Category from "../models/Categories";
 import { AuthRequest } from "../models/type";
+import { convertFromUSD } from "../utils/currencyConverter";
 
 /**
  * @swagger
@@ -72,6 +73,10 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: "Invalid category ID" });
     }
     
+    // Live currency conversion
+    const baseUSD = req.body.priceUSD || price || 0;
+    const { priceUSD, priceEUR, priceRWF } = await convertFromUSD(baseUSD);
+    
     const Images: any[] = [];
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files as any[]) {
@@ -84,7 +89,10 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
     
     const product = await Product.create({
       name,
-      price,
+      price: priceUSD, // Use USD as the base price
+      priceUSD,
+      priceEUR,
+      priceRWF,
       oldPrice,
       description,
       inStock: stock ? stock > 0 : true,
@@ -133,20 +141,32 @@ export const createProduct = async (req: AuthRequest, res: Response) => {
  *         description: Product not found
  */
 export const updateProduct = async (req: AuthRequest, res: Response) => {
-  const product = await Product.findById(req.params.id);
-  if (!product) return res.status(404).json({ error: "Product not found" });
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ error: "Product not found" });
 
-  if (
-    req.user!.role !== "admin" &&
-    product.createdBy.toString() !== req.user!.id
-  ) {
-    return res.status(403).json({ error: "Not allowed" });
+    if (
+      req.user!.role !== "admin" &&
+      product.createdBy.toString() !== req.user!.id
+    ) {
+      return res.status(403).json({ error: "Not allowed" });
+    }
+
+    // Live currency conversion on price update
+    if (req.body.price !== undefined) {
+      const converted = await convertFromUSD(req.body.price);
+      req.body.priceUSD = converted.priceUSD;
+      req.body.priceEUR = converted.priceEUR;
+      req.body.priceRWF = converted.priceRWF;
+    }
+
+    Object.assign(product, req.body);
+    await product.save();
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update product' });
   }
-
-  Object.assign(product, req.body);
-  await product.save();
-
-  res.json(product);
 };
 
 /**
@@ -188,6 +208,7 @@ export const deleteProduct = async (req: AuthRequest, res: Response) => {
   await product.deleteOne();
   res.json({ message: "Product deleted" });
 };
+
 /**
  * @swagger
  * /api/products/{id}:
@@ -212,6 +233,7 @@ export const getProduct = async (req: AuthRequest, res: Response) => {
   if (!product) return res.status(404).json({ error: "Product not found" });
   res.json(product);
 };
+
 /**
  * @swagger
  * /api/products:

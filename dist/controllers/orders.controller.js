@@ -42,7 +42,7 @@ dotenv_1.default.config();
  */
 const NewOrder = async (req, res) => {
     try {
-        const { cartName } = req.body;
+        const { cartName, customerInfo } = req.body;
         const orderId = (0, uuid_1.v4)();
         if (!cartName) {
             return res.status(400).json({ message: "cartName is required" });
@@ -53,6 +53,7 @@ const NewOrder = async (req, res) => {
             return res.status(404).json({ message: "Cart not found" });
         }
         let totalAmount = 0;
+        const items = [];
         // 2. Calculate total using Product.price
         for (const item of cart.productDet) {
             const product = await Product_1.default.findOne({ name: item.ProductName });
@@ -62,18 +63,35 @@ const NewOrder = async (req, res) => {
                 });
             }
             totalAmount += item.quantity * product.price;
+            items.push({
+                productId: product._id.toString(),
+                name: product.name,
+                price: product.price,
+                quantity: item.quantity,
+            });
         }
+        const user = await User_1.default.findOne({
+            username: cart.CartName.replace("_cart", ""),
+        });
         // 3. Create order
         const order = await orders_1.default.create({
             orderId,
             cartName: cart.CartName,
             totalAmount,
+            items,
+            customerInfo: customerInfo || {
+                name: user?.username || "Customer",
+                email: user?.email || "",
+                phone: "",
+                address: "",
+            },
+            userId: user?._id?.toString() || cart.CartName,
         });
         // Send order confirmation email
         try {
-            const user = await User_1.default.findOne({ username: cart.CartName.replace('_cart', '') });
-            if (user) {
-                await (0, emailServices_1.sendOrderConfirmationEmail)(user.email, user.username, orderId, totalAmount);
+            const email = customerInfo?.email || user?.email;
+            if (email) {
+                await (0, emailServices_1.sendOrderConfirmationEmail)(email, customerInfo?.name || user?.username || "Customer", orderId, totalAmount);
             }
         }
         catch (emailError) {

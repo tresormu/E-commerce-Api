@@ -121,7 +121,7 @@ export const register = async (req: Request, res: Response) => {
  */
 export const AllUsers = async (req: Request, res: Response) => {
   try {
-    const users = await User.find();
+    const users = await User.find().select('-password -resetPasswordToken -resetPasswordExpires');
     res.json({
       users,
     });

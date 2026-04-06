@@ -187,3 +187,89 @@ export const orderCancellationTemplate = (
     </html>
   `;
 };
+
+export const orderPaymentSuccessTemplate = (
+  firstName: string,
+  orderId: string,
+  total: number,
+) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #16a34a; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .order-details { background: white; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Payment Successful</h1>
+        </div>
+        <div class="content">
+          <h2>Hi ${firstName},</h2>
+          <p>Your payment was successful and your order is now being processed.</p>
+          <div class="order-details">
+            <h3>Order Details:</h3>
+            <p><strong>Order ID:</strong> #${orderId}</p>
+            <p><strong>Total Amount:</strong> $${total.toFixed(2)}</p>
+            <p><strong>Status:</strong> Processing</p>
+          </div>
+          <p>We will email you with delivery updates.</p>
+        </div>
+        <div class="footer">
+          <p>Copyright 2024 B-DIFFERENT. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+export const orderPaymentFailedTemplate = (
+  firstName: string,
+  orderId: string,
+  total: number,
+) => {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #dc2626; color: white; padding: 20px; text-align: center; }
+        .content { padding: 20px; background: #f9f9f9; }
+        .order-details { background: white; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        .footer { text-align: center; padding: 20px; color: #777; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Payment Failed</h1>
+        </div>
+        <div class="content">
+          <h2>Hi ${firstName},</h2>
+          <p>Your payment did not go through for the order below.</p>
+          <div class="order-details">
+            <h3>Order Details:</h3>
+            <p><strong>Order ID:</strong> #${orderId}</p>
+            <p><strong>Total Amount:</strong> $${total.toFixed(2)}</p>
+            <p><strong>Status:</strong> Payment Failed</p>
+          </div>
+          <p>You can try paying again from your orders page.</p>
+        </div>
+        <div class="footer">
+          <p>Copyright 2024 B-DIFFERENT. All rights reserved.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};

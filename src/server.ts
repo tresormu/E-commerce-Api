@@ -10,6 +10,7 @@ import orderRoutes from "./routes/ordersRoutes";
 import UploadRoutes from "./routes/uploadRoutes";
 import adminRoutes from "./routes/adminRoutes";
 import vendorRoutes from "./routes/vendorRoutes";
+import paymentRoutes from "./routes/paymentRoutes";
 import cors from "cors";
 import helmet from "helmet";
 
@@ -42,7 +43,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(helmet());
 app.use(
   cors({
-    origin: ["https://full-ecommerce-sigma.vercel.app"],
+    origin: ["https://full-ecommerce-sigma.vercel.app",
+            "http://localhost:5173"
+    ],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   }),
 );
@@ -64,6 +67,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api/upload", UploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/vendor", vendorRoutes);

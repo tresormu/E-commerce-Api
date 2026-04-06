@@ -37,6 +37,9 @@ const mongoose_1 = __importStar(require("mongoose"));
 const ProductSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     price: { type: Number, required: true },
+    priceUSD: { type: Number, required: true },
+    priceEUR: { type: Number, required: true },
+    priceRWF: { type: Number, required: true },
     size: { type: String, enum: ["X", "S", "M", "L", "XL", "XXL"] },
     oldPrice: { type: Number },
     description: { type: String },

@@ -33,35 +33,23 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.PaymentTransaction = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
-const OrderSchema = new mongoose_1.Schema({
-    orderId: { type: String },
-    userId: { type: String, required: true },
-    cartName: { type: String, required: true },
-    totalAmount: { type: Number },
-    status: { type: String, default: 'pending', enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'] },
-    items: [{
-            productId: String,
-            name: String,
-            price: Number,
-            quantity: Number
-        }],
-    customerInfo: {
-        name: String,
-        email: String,
-        phone: String,
-        address: String
-    },
-    paymentMethod: { type: String, default: 'card' },
-    paymentStatus: {
-        type: String,
-        enum: ['unpaid', 'pending', 'completed', 'failed'],
-        default: 'unpaid',
-    },
-    paymentProvider: { type: String, default: 'flutterwave' },
-    paymentTxRef: { type: String },
+const PaymentTransactionSchema = new mongoose_1.Schema({
+    user: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },
+    order: { type: mongoose_1.Schema.Types.ObjectId, ref: "orders", required: true },
+    txRef: { type: String, required: true, unique: true },
+    flwId: { type: String },
+    status: { type: String, enum: ["pending", "completed", "failed"], default: "pending" },
+    amount: { type: Number, required: true, min: 0 },
+    currency: { type: String, required: true, default: "RWF" },
+    provider: { type: String, enum: ["flutterwave"], default: "flutterwave" },
+    paymentUrl: { type: String },
+    metadata: { type: mongoose_1.Schema.Types.Mixed },
+    raw: { type: mongoose_1.Schema.Types.Mixed },
     paidAt: { type: Date },
-    timeOrderPlaced: { type: Date, required: false, default: Date.now },
-});
-OrderSchema.index({ orderId: 1 });
-exports.default = mongoose_1.default.model("orders", OrderSchema);
+}, { timestamps: true });
+PaymentTransactionSchema.index({ flwId: 1 }, { sparse: true });
+PaymentTransactionSchema.index({ order: 1, createdAt: -1 });
+PaymentTransactionSchema.index({ user: 1, status: 1, createdAt: -1 });
+exports.PaymentTransaction = mongoose_1.default.model("PaymentTransaction", PaymentTransactionSchema);

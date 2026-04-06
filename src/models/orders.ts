@@ -18,6 +18,10 @@ export interface Order extends Document {
     address: string;
   };
   paymentMethod: string;
+  paymentStatus?: 'unpaid' | 'pending' | 'completed' | 'failed';
+  paymentProvider?: 'flutterwave';
+  paymentTxRef?: string;
+  paidAt?: Date;
   timeOrderPlaced: Date;
 }
 const OrderSchema = new Schema<Order>({
@@ -39,6 +43,16 @@ const OrderSchema = new Schema<Order>({
     address: String
   },
   paymentMethod: { type: String, default: 'card' },
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'pending', 'completed', 'failed'],
+    default: 'unpaid',
+  },
+  paymentProvider: { type: String, default: 'flutterwave' },
+  paymentTxRef: { type: String },
+  paidAt: { type: Date },
   timeOrderPlaced: { type: Date, required: false, default: Date.now },
 });
+
+OrderSchema.index({ orderId: 1 });
 export default mongoose.model<Order>("orders", OrderSchema);

@@ -13,6 +13,7 @@ exports.deleteProducts = exports.getProduct = exports.deleteProduct = exports.up
 const mongoose_1 = __importDefault(require("mongoose"));
 const Product_1 = __importDefault(require("../models/Product"));
 const Categories_1 = __importDefault(require("../models/Categories"));
+const currencyConverter_1 = require("../utils/currencyConverter");
 /**
  * @swagger
  * /api/products:
@@ -72,6 +73,9 @@ const createProduct = async (req, res) => {
         if (!mongoose_1.default.Types.ObjectId.isValid(category)) {
             return res.status(400).json({ error: "Invalid category ID" });
         }
+        // Live currency conversion
+        const baseUSD = req.body.priceUSD || price || 0;
+        const { priceUSD, priceEUR, priceRWF } = await (0, currencyConverter_1.convertFromUSD)(baseUSD);
         const Images = [];
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
@@ -83,7 +87,10 @@ const createProduct = async (req, res) => {
             return res.status(404).json({ error: "Category not found" });
         const product = await Product_1.default.create({
             name,
-            price,
+            price: priceUSD, // Use USD as the base price
+            priceUSD,
+            priceEUR,
+            priceRWF,
             oldPrice,
             description,
             inStock: stock ? stock > 0 : true,
@@ -132,16 +139,28 @@ exports.createProduct = createProduct;
  *         description: Product not found
  */
 const updateProduct = async (req, res) => {
-    const product = await Product_1.default.findById(req.params.id);
-    if (!product)
-        return res.status(404).json({ error: "Product not found" });
-    if (req.user.role !== "admin" &&
-        product.createdBy.toString() !== req.user.id) {
-        return res.status(403).json({ error: "Not allowed" });
+    try {
+        const product = await Product_1.default.findById(req.params.id);
+        if (!product)
+            return res.status(404).json({ error: "Product not found" });
+        if (req.user.role !== "admin" &&
+            product.createdBy.toString() !== req.user.id) {
+            return res.status(403).json({ error: "Not allowed" });
+        }
+        // Live currency conversion on price update
+        if (req.body.price !== undefined) {
+            const converted = await (0, currencyConverter_1.convertFromUSD)(req.body.price);
+            req.body.priceUSD = converted.priceUSD;
+            req.body.priceEUR = converted.priceEUR;
+            req.body.priceRWF = converted.priceRWF;
+        }
+        Object.assign(product, req.body);
+        await product.save();
+        res.json(product);
     }
-    Object.assign(product, req.body);
-    await product.save();
-    res.json(product);
+    catch (error) {
+        res.status(500).json({ error: 'Failed to update product' });
+    }
 };
 exports.updateProduct = updateProduct;
 /**
