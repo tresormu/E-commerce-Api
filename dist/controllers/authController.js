@@ -122,7 +122,7 @@ exports.register = register;
  */
 const AllUsers = async (req, res) => {
     try {
-        const users = await User_1.default.find();
+        const users = await User_1.default.find().select('-password -resetPasswordToken -resetPasswordExpires');
         res.json({
             users,
         });

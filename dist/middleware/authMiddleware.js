@@ -22,8 +22,8 @@ const protect = (req, res, next) => {
         };
         next();
     }
-    catch (error) {
-        res.status(401).json({ error: error });
+    catch {
+        res.status(401).json({ error: 'Invalid or expired token' });
     }
 };
 exports.protect = protect;

@@ -47,20 +47,20 @@ const NewOrder = async (req, res) => {
         if (!cartName) {
             return res.status(400).json({ message: "cartName is required" });
         }
-        // 1. Find cart
         const cart = await Cart_1.default.findOne({ CartName: cartName });
         if (!cart) {
             return res.status(404).json({ message: "Cart not found" });
         }
+        // Batch-fetch all products in one query — avoids N+1
+        const productNames = cart.productDet.map((item) => item.ProductName);
+        const products = await Product_1.default.find({ name: { $in: productNames } });
+        const productMap = new Map(products.map((p) => [p.name, p]));
         let totalAmount = 0;
         const items = [];
-        // 2. Calculate total using Product.price
         for (const item of cart.productDet) {
-            const product = await Product_1.default.findOne({ name: item.ProductName });
+            const product = productMap.get(item.ProductName);
             if (!product) {
-                return res.status(400).json({
-                    message: `Product ${item.ProductName} not found`,
-                });
+                return res.status(400).json({ message: `Product ${item.ProductName} not found` });
             }
             totalAmount += item.quantity * product.price;
             items.push({
@@ -70,10 +70,7 @@ const NewOrder = async (req, res) => {
                 quantity: item.quantity,
             });
         }
-        const user = await User_1.default.findOne({
-            username: cart.CartName.replace("_cart", ""),
-        });
-        // 3. Create order
+        const user = await User_1.default.findOne({ username: cart.CartName.replace("_cart", "") });
         const order = await orders_1.default.create({
             orderId,
             cartName: cart.CartName,
@@ -87,7 +84,6 @@ const NewOrder = async (req, res) => {
             },
             userId: user?._id?.toString() || cart.CartName,
         });
-        // Send order confirmation email
         try {
             const email = customerInfo?.email || user?.email;
             if (email) {
@@ -95,17 +91,12 @@ const NewOrder = async (req, res) => {
             }
         }
         catch (emailError) {
-            console.error('Failed to send order confirmation email:', emailError);
+            console.error("Failed to send order confirmation email:", emailError);
         }
-        res.status(201).json({
-            message: "Order placed successfully",
-            order,
-        });
+        res.status(201).json({ message: "Order placed successfully", order });
     }
     catch (error) {
-        res
-            .status(500)
-            .json({ message: "Failed to create order", error: error.message });
+        res.status(500).json({ message: "Failed to create order", error: error.message });
     }
 };
 exports.NewOrder = NewOrder;
@@ -121,18 +112,6 @@ exports.NewOrder = NewOrder;
  *         required: true
  *         schema:
  *           type: string
- *         example: "uuid-value"
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               cartName:
- *                 type: string
- *               totalAmount:
- *                 type: number
  *     responses:
  *       200:
  *         description: Order updated successfully
@@ -144,16 +123,10 @@ exports.NewOrder = NewOrder;
 const updateOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
-        const order = await orders_1.default.findOneAndUpdate({ orderId }, req.body, {
-            new: true,
-        });
-        if (!order) {
+        const order = await orders_1.default.findOneAndUpdate({ orderId }, req.body, { new: true });
+        if (!order)
             return res.status(404).json({ message: "Order not found" });
-        }
-        res.status(200).json({
-            message: "Order updated successfully",
-            order,
-        });
+        res.status(200).json({ message: "Order updated successfully", order });
     }
     catch (error) {
         res.status(500).json({ message: "Failed to update order", error });
@@ -172,7 +145,6 @@ exports.updateOrder = updateOrder;
  *         required: true
  *         schema:
  *           type: string
- *         example: "uuid-value"
  *     responses:
  *       200:
  *         description: Order deleted successfully
@@ -185,9 +157,8 @@ const DeleteOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
         const deleted = await orders_1.default.findOneAndDelete({ orderId });
-        if (!deleted) {
+        if (!deleted)
             return res.status(404).json({ message: "Order not found" });
-        }
         res.status(200).json({ message: "Order deleted successfully" });
     }
     catch (error) {
@@ -195,21 +166,15 @@ const DeleteOrder = async (req, res) => {
     }
 };
 exports.DeleteOrder = DeleteOrder;
-// Get user orders
 const getUserOrders = async (req, res) => {
     try {
         const userId = req.user?.id;
-        if (!userId) {
+        if (!userId)
             return res.status(401).json({ message: "User not authenticated" });
-        }
-        // Get user to find their cart name
         const user = await User_1.default.findById(userId);
-        if (!user) {
+        if (!user)
             return res.status(404).json({ message: "User not found" });
-        }
-        const userCartName = `${user.username}_cart`;
-        // Filter orders by user's cart name
-        const orders = await orders_1.default.find({ cartName: userCartName }).sort({ createdAt: -1 });
+        const orders = await orders_1.default.find({ cartName: `${user.username}_cart` }).sort({ createdAt: -1 });
         res.status(200).json(orders);
     }
     catch (error) {
@@ -217,28 +182,21 @@ const getUserOrders = async (req, res) => {
     }
 };
 exports.getUserOrders = getUserOrders;
-// Cancel order
 const cancelOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
         const userId = req.user?.id;
-        // Get user to verify ownership
         const user = await User_1.default.findById(userId);
-        if (!user) {
+        if (!user)
             return res.status(404).json({ message: "User not found" });
-        }
-        const userCartName = `${user.username}_cart`;
-        // Find order and verify it belongs to the user
-        const order = await orders_1.default.findOneAndUpdate({ _id: orderId, cartName: userCartName }, { status: 'cancelled' }, { new: true });
-        if (!order) {
+        const order = await orders_1.default.findOneAndUpdate({ _id: orderId, cartName: `${user.username}_cart` }, { status: "cancelled" }, { new: true });
+        if (!order)
             return res.status(404).json({ message: "Order not found or access denied" });
-        }
-        // Send cancellation email
         try {
-            await (0, emailServices_1.sendOrderCancellationEmail)(user.email, user.username, order.orderId || order._id.toString(), 'customer');
+            await (0, emailServices_1.sendOrderCancellationEmail)(user.email, user.username, order.orderId || order._id.toString(), "customer");
         }
         catch (emailError) {
-            console.error('Failed to send cancellation email:', emailError);
+            console.error("Failed to send cancellation email:", emailError);
         }
         res.status(200).json({ message: "Order cancelled successfully", order });
     }
@@ -247,29 +205,26 @@ const cancelOrder = async (req, res) => {
     }
 };
 exports.cancelOrder = cancelOrder;
-// Update order status (admin)
 const updateOrderStatus = async (req, res) => {
     try {
         const { orderId } = req.params;
         const { status } = req.body;
-        const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+        const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ message: "Invalid status" });
         }
         const order = await orders_1.default.findByIdAndUpdate(orderId, { status }, { new: true });
-        if (!order) {
+        if (!order)
             return res.status(404).json({ message: "Order not found" });
-        }
-        // Send cancellation email if admin cancelled the order
-        if (status === 'cancelled') {
+        if (status === "cancelled") {
             try {
-                const user = await User_1.default.findOne({ username: order.cartName.replace('_cart', '') });
+                const user = await User_1.default.findOne({ username: order.cartName.replace("_cart", "") });
                 if (user) {
-                    await (0, emailServices_1.sendOrderCancellationEmail)(user.email, user.username, order.orderId || order._id.toString(), 'admin');
+                    await (0, emailServices_1.sendOrderCancellationEmail)(user.email, user.username, order.orderId || order._id.toString(), "admin");
                 }
             }
             catch (emailError) {
-                console.error('Failed to send admin cancellation email:', emailError);
+                console.error("Failed to send admin cancellation email:", emailError);
             }
         }
         res.status(200).json({ message: "Order status updated successfully", order });
@@ -279,7 +234,6 @@ const updateOrderStatus = async (req, res) => {
     }
 };
 exports.updateOrderStatus = updateOrderStatus;
-// Get all orders (admin)
 const getAllOrders = async (req, res) => {
     try {
         const orders = await orders_1.default.find().sort({ timeOrderPlaced: -1 });
