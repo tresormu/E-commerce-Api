@@ -22,7 +22,7 @@ const storage = multer_1.default.diskStorage({
         cb(null, `img-${uniqueSuffix}${ext}`);
     },
 });
-// 3️⃣ File filter
+// File filter
 const fileFilter = (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx/;
     const extname = allowedTypes.test(path_1.default.extname(file.originalname).toLowerCase());
@@ -34,7 +34,7 @@ const fileFilter = (req, file, cb) => {
         cb(new Error("Invalid file type. Only JPEG, PNG, GIF, PDF, DOC, DOCX allowed"));
     }
 };
-// 4️⃣ Multer instance
+// Multer instance
 exports.upload = (0, multer_1.default)({
     storage,
     limits: {

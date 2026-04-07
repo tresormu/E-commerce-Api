@@ -22,7 +22,7 @@ const storage = multer.diskStorage({
   },
 });
 
-// 3️⃣ File filter
+// File filter
 const fileFilter = (
   req: any,
   file: Express.Multer.File,
@@ -47,7 +47,7 @@ const fileFilter = (
   }
 };
 
-// 4️⃣ Multer instance
+// Multer instance
 export const upload = multer({
   storage,
   limits: {

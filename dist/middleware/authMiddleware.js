@@ -5,8 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.protect = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+const config_1 = __importDefault(require("../config/config"));
 const protect = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -14,7 +13,7 @@ const protect = (req, res, next) => {
     }
     try {
         const token = authHeader.split(" ")[1];
-        const decoded = jsonwebtoken_1.default.verify(token, process.env.JWT_SECRET);
+        const decoded = jsonwebtoken_1.default.verify(token, config_1.default.jwtSecret);
         req.user = {
             username: decoded.username,
             id: decoded.id,
@@ -23,7 +22,7 @@ const protect = (req, res, next) => {
         next();
     }
     catch {
-        res.status(401).json({ error: 'Invalid or expired token' });
+        res.status(401).json({ error: "Invalid or expired token" });
     }
 };
 exports.protect = protect;

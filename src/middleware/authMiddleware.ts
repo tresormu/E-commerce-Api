@@ -1,14 +1,9 @@
 import { Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { AuthRequest } from "../models/type";
-import dotenv from "dotenv";
-dotenv.config();
+import config from "../config/config";
 
-export const protect = (
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-) => {
+export const protect = (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
@@ -17,17 +12,16 @@ export const protect = (
 
   try {
     const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, config.jwtSecret) as any;
 
     req.user = {
-      username:decoded.username,
+      username: decoded.username,
       id: decoded.id,
       role: decoded.role,
-    }
-    
+    };
 
     next();
   } catch {
-    res.status(401).json({ error: 'Invalid or expired token' });
+    res.status(401).json({ error: "Invalid or expired token" });
   }
 };

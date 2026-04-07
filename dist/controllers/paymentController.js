@@ -239,7 +239,8 @@ const verifyPayment = async (req, res) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
         const txRef = req.params.txRef;
-        const flwIdParam = req.query.flwId;
+        const rawFlwId = req.query.flwId;
+        const flwIdParam = Array.isArray(rawFlwId) ? String(rawFlwId[0]) : rawFlwId ? String(rawFlwId) : undefined;
         const transaction = await PaymentTransaction_1.PaymentTransaction.findOne({ txRef });
         if (!transaction) {
             return res.status(404).json({ message: "Transaction not found" });

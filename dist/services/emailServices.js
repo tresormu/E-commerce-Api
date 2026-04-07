@@ -5,65 +5,26 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendOrderPaymentFailedEmail = exports.sendOrderPaymentSuccessEmail = exports.sendOrderCancellationEmail = exports.sendOrderConfirmationEmail = exports.sendPasswordResetEmail = exports.sendWelcomeEmail = exports.transporter = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
-const dotenv_1 = __importDefault(require("dotenv"));
+const config_1 = __importDefault(require("../config/config"));
 const emailTemplate_1 = require("../utils/emailTemplate");
-dotenv_1.default.config();
-const getTransporter = () => {
-    const host = process.env.EMAIL_HOST;
-    const port = process.env.EMAIL_PORT ? Number(process.env.EMAIL_PORT) : undefined;
-    const secure = process.env.EMAIL_SECURE === "true" || (port !== undefined && port === 465);
-    if (host && port) {
-        return nodemailer_1.default.createTransport({
-            host,
-            port,
-            secure,
-            auth: process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
-                ? {
-                    user: process.env.EMAIL_USER,
-                    pass: process.env.EMAIL_PASSWORD,
-                }
-                : undefined,
-        });
+exports.transporter = nodemailer_1.default.createTransport({
+    host: config_1.default.email.host,
+    port: config_1.default.email.port,
+    secure: config_1.default.email.port === 465,
+    auth: {
+        user: config_1.default.email.user,
+        pass: config_1.default.email.password,
+    },
+});
+exports.transporter.verify((error) => {
+    if (error) {
+        console.warn("Email configuration warning:", error.message);
     }
-    if (process.env.EMAIL_SERVICE && process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-        return nodemailer_1.default.createTransport({
-            service: process.env.EMAIL_SERVICE,
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        });
+    else {
+        console.log("Email server is ready to send messages");
     }
-    if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
-        return nodemailer_1.default.createTransport({
-            service: "gmail",
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD,
-            },
-        });
-    }
-    return null;
-};
-exports.transporter = getTransporter();
-if (exports.transporter) {
-    exports.transporter.verify((error) => {
-        if (error) {
-            console.warn("Email configuration warning:", error.message);
-        }
-        else {
-            console.log("Email server is ready to send messages");
-        }
-    });
-}
-else {
-    console.log("Email service disabled - no credentials provided");
-}
-const send = (to, subject, html) => {
-    if (!exports.transporter)
-        return Promise.resolve();
-    return exports.transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html });
-};
+});
+const send = (to, subject, html) => exports.transporter.sendMail({ from: config_1.default.email.from, to, subject, html });
 const sendWelcomeEmail = (email, username) => send(email, "Welcome!", (0, emailTemplate_1.welcomeEmailTemplate)(username, email));
 exports.sendWelcomeEmail = sendWelcomeEmail;
 const sendPasswordResetEmail = (email, username, token) => send(email, "Password Reset Request", (0, emailTemplate_1.passwordResetTemplate)(username, token));

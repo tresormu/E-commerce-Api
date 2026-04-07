@@ -13,40 +13,16 @@ import vendorRoutes from "./routes/vendorRoutes";
 import paymentRoutes from "./routes/paymentRoutes";
 import cors from "cors";
 import helmet from "helmet";
-
-import dotenv from "dotenv";
-dotenv.config();
-
-const requireEnv = (key: string): string => {
-  const value = process.env[key];
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-  return value;
-};
-
-const MONGO_URL: string = requireEnv("MONGO_URL");
-requireEnv("JWT_SECRET");
-requireEnv("CLOUDINARY_CLOUD_NAME");
-requireEnv("CLOUDINARY_API_KEY");
-requireEnv("CLOUDINARY_API_SECRET");
-requireEnv("EMAIL_HOST");
-requireEnv("EMAIL_PORT");
-requireEnv("EMAIL_USER");
-requireEnv("EMAIL_PASSWORD");
-requireEnv("EMAIL_FROM");
+import config from "./config/config";
 
 const app = express();
-const PORT = process.env.PORT || 9000;
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(helmet());
 app.use(
   cors({
-    origin: ["https://full-ecommerce-sigma.vercel.app",
-            "http://localhost:5173"
-    ],
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    origin: ["https://full-ecommerce-sigma.vercel.app", "http://localhost:5173"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   }),
 );
 app.use(
@@ -59,9 +35,10 @@ app.use(
 );
 
 mongoose
-  .connect(MONGO_URL)
+  .connect(config.mongoUrl)
   .then(() => console.log(" Connected to MongoDB Compass"))
   .catch((err) => console.error(" Connection error:", err));
+
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
@@ -71,6 +48,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/upload", UploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/vendor", vendorRoutes);
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+
+app.listen(config.port, () => {
+  console.log(`Server is running on http://localhost:${config.port}`);
 });

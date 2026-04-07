@@ -15,6 +15,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = __importDefault(require("../models/User"));
 const crypto_1 = __importDefault(require("crypto"));
+const config_1 = __importDefault(require("../config/config"));
 /**
  * @swagger
  * /api/auth/register:
@@ -80,7 +81,6 @@ const register = async (req, res) => {
         });
         (0, emailServices_1.sendWelcomeEmail)(email, username).catch((err) => {
             console.error("Failed to send welcome email:", err);
-            // Don't fail registration if email fails
         });
         res.status(201).json({
             message: "User registered successfully",
@@ -95,9 +95,7 @@ const register = async (req, res) => {
     }
     catch (error) {
         if (error.code === 11000) {
-            return res
-                .status(400)
-                .json({ error: "Email or username already exists" });
+            return res.status(400).json({ error: "Email or username already exists" });
         }
         res.status(500).json({ error: "Registration failed" });
     }
@@ -108,7 +106,6 @@ exports.register = register;
  * /api/auth:
  *   get:
  *     summary: Get all users (Admin only)
- *     description: Returns all registered users
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -122,10 +119,8 @@ exports.register = register;
  */
 const AllUsers = async (req, res) => {
     try {
-        const users = await User_1.default.find().select('-password -resetPasswordToken -resetPasswordExpires');
-        res.json({
-            users,
-        });
+        const users = await User_1.default.find().select("-password -resetPasswordToken -resetPasswordExpires");
+        res.json({ users });
     }
     catch (error) {
         res.status(500).json({ error: "invalid endpoint" });
@@ -137,7 +132,6 @@ exports.AllUsers = AllUsers;
  * /api/auth/login:
  *   post:
  *     summary: Login user
- *     description: Authenticate user and return JWT token
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -174,7 +168,7 @@ const login = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
-        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.UserType }, process.env.JWT_SECRET, { expiresIn: "7d" });
+        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.UserType }, config_1.default.jwtSecret, { expiresIn: config_1.default.expirationToken });
         res.json({
             message: "Login successful",
             token,
@@ -198,7 +192,6 @@ exports.login = login;
  * /api/auth/profile:
  *   get:
  *     summary: Get logged-in user's profile
- *     description: Returns profile of the authenticated user
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -235,29 +228,9 @@ exports.getProfile = getProfile;
  * /api/auth/profile:
  *   put:
  *     summary: Update user profile
- *     description: Update authenticated user's profile information. All fields are optional - only provided fields will be updated.
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
- *     requestBody:
- *       required: false
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               username:
- *                 type: string
- *                 description: Optional - new username
- *                 example: john_doe_updated
- *               email:
- *                 type: string
- *                 description: Optional - new email address
- *                 example: john.updated@gmail.com
- *               profile:
- *                 type: string
- *                 format: binary
- *                 description: Optional - new profile image
  *     responses:
  *       200:
  *         description: Profile updated successfully
@@ -275,19 +248,16 @@ const updateUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ error: "User not found" });
         }
-        // Check if email is being changed and if it already exists
         if (email && email !== user.email) {
             const existingUser = await User_1.default.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ error: "Email already exists" });
             }
         }
-        // Handle profile image upload
         let imageUrl = user.profile;
         if (req.file) {
             imageUrl = req.file.path;
         }
-        // Update user fields
         if (username)
             user.username = username;
         if (email)
@@ -316,7 +286,6 @@ exports.updateUser = updateUser;
  * /api/auth/account:
  *   delete:
  *     summary: Delete user account
- *     description: Delete the authenticated user's account permanently
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []
@@ -349,48 +318,12 @@ exports.deleteAccount = deleteAccount;
  * /api/auth/forgot-password:
  *   post:
  *     summary: Request password reset
- *     description: Sends a password reset token to the user's email address.
  *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - email
- *             properties:
- *               email:
- *                 type: string
- *                 format: email
- *                 example: user@example.com
  *     responses:
  *       200:
  *         description: Password reset email sent successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 message:
- *                   type: string
- *                   example: Password reset email sent. Check your inbox!
  *       404:
  *         description: No user found with that email
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: fail
- *                 message:
- *                   type: string
- *                   example: No user found with that email
  *       500:
  *         description: Server error
  */
@@ -399,22 +332,13 @@ const forgotPassword = async (req, res) => {
         const { email } = req.body;
         const user = await User_1.default.findOne({ email });
         if (!user) {
-            return res.status(404).json({
-                status: "fail",
-                message: "No user found with that email",
-            });
+            return res.status(404).json({ status: "fail", message: "No user found with that email" });
         }
-        // Generate reset token
         const resetToken = crypto_1.default.randomBytes(32).toString("hex");
-        const hashedToken = crypto_1.default
-            .createHash("sha256")
-            .update(resetToken)
-            .digest("hex");
-        // Save token to user
+        const hashedToken = crypto_1.default.createHash("sha256").update(resetToken).digest("hex");
         user.resetPasswordToken = hashedToken;
-        user.resetPasswordExpires = new Date(Date.now() + 3600000); // 1 hour
+        user.resetPasswordExpires = new Date(Date.now() + 3600000);
         await user.save();
-        // Send email
         await (0, emailServices_1.sendPasswordResetEmail)(email, user.username, resetToken);
         return res.status(200).json({
             status: "success",
@@ -435,73 +359,27 @@ exports.forgotPassword = forgotPassword;
  * /api/auth/reset-password:
  *   post:
  *     summary: Reset user password
- *     description: Resets the user's password using a valid reset token.
  *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - token
- *               - newPassword
- *             properties:
- *               token:
- *                 type: string
- *                 example: 8f3a9c4d2a1e6b7c9d...
- *               newPassword:
- *                 type: string
- *                 format: password
- *                 example: NewStrongPassword123!
  *     responses:
  *       200:
  *         description: Password reset successful
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: success
- *                 message:
- *                   type: string
- *                   example: Password reset successful. You can now login.
  *       400:
  *         description: Invalid or expired token
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                   example: fail
- *                 message:
- *                   type: string
- *                   example: Invalid or expired reset token
  *       500:
  *         description: Server error
  */
 const resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
-        // Hash the token from URL
         const hashedToken = crypto_1.default.createHash("sha256").update(token).digest("hex");
-        // Find user with valid token
         const user = await User_1.default.findOne({
             resetPasswordToken: hashedToken,
             resetPasswordExpires: { $gt: Date.now() },
         });
         if (!user) {
-            return res.status(400).json({
-                status: "fail",
-                message: "Invalid or  expired reset token",
-            });
+            return res.status(400).json({ status: "fail", message: "Invalid or expired reset token" });
         }
-        // Update password
-        user.password = await bcryptjs_1.default.hash(newPassword, 12);
+        user.password = await bcryptjs_1.default.hash(newPassword, config_1.default.saltRounds);
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
         await user.save();
@@ -524,7 +402,6 @@ exports.resetPassword = resetPassword;
  * /api/auth/users:
  *   delete:
  *     summary: Delete all users (Admin only)
- *     description: Deletes all users from the database
  *     tags: [Auth]
  *     security:
  *       - bearerAuth: []

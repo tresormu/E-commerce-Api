@@ -14,7 +14,9 @@ import {
 import { upload } from "../middleware/cloudinary.middleware";
 
 const router = Router();
-
+// Protected routes (with auth)
+router.use(protect);
+router.use(authorizeRoles("admin"));
 router.get("/stats", getDashboardStats);
 router.get("/analytics", getAnalytics);
 router.get("/orders", getAdminOrders);
@@ -26,9 +28,4 @@ router.post("/campaigns", addCampaign);
 
 // Products (no auth for testing)
 router.post("/products", upload.array("images", 4), createAdminProduct);
-
-// Protected routes (with auth)
-// router.use(protect);
-// router.use(authorizeRoles("admin", "manager", "support"));
-
 export default router;
