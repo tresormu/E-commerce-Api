@@ -8,7 +8,7 @@ app {
 
   env = {}
 
-  port = 9000
+  port = 8080
 
   primary_region = "fsn"
 

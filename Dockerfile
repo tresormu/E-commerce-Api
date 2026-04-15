@@ -6,7 +6,6 @@ FROM node:${NODE_VERSION}-slim as base
 LABEL andasy_launch_runtime="NodeJS"
 
 WORKDIR /app
-ENV NODE_ENV=production
 
 
 # Build stage
@@ -15,9 +14,8 @@ FROM base as build
 RUN apt-get update -qq && \
     apt-get install -y python-is-python3 pkg-config build-essential 
 
-# ✅ FIXED HERE
 COPY --link package.json package-lock.json ./
-RUN npm install
+RUN npm ci
 
 COPY --link . .
 RUN npm run build
@@ -26,7 +24,8 @@ RUN npm prune --production
 
 # Final stage
 FROM base
+ENV NODE_ENV=production
 COPY --from=build /app /app
 
-EXPOSE 9000
+EXPOSE 8080
 CMD ["npm", "run", "start"]

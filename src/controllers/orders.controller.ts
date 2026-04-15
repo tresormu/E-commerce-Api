@@ -5,7 +5,7 @@
  *   description: API for managing customer orders
  */
 import { Response } from "express";
-import { v4 as uuid } from "uuid";
+import { randomUUID } from "crypto";
 import Order from "../models/orders";
 import Cart from "../models/Cart";
 import Product from "../models/Product";
@@ -44,7 +44,7 @@ import { AuthRequest } from "../models/type";
 export const NewOrder = async (req: AuthRequest, res: Response) => {
   try {
     const { cartName, customerInfo } = req.body;
-    const orderId = uuid();
+    const orderId = randomUUID();
 
     if (!cartName) {
       return res.status(400).json({ message: "cartName is required" });

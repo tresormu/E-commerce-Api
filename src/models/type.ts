@@ -1,4 +1,5 @@
 import { Request } from "express";
+import { Multer } from "multer";
 
 export interface AuthUser {
   username: string;
@@ -8,4 +9,6 @@ export interface AuthUser {
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
+  file?: Express.Multer.File;
+  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
 }
