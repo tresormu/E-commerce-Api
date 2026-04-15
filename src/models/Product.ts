@@ -36,4 +36,8 @@ const ProductSchema = new Schema<IProduct>({
   inStock: { type: Boolean, default: true },
 });
 
+ProductSchema.index({ category: 1 });
+ProductSchema.index({ createdBy: 1 });
+ProductSchema.index({ name: 'text' }); // For search performance
+
 export default mongoose.model<IProduct>("Product", ProductSchema);

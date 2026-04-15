@@ -18,15 +18,30 @@ const vendorRoutes_1 = __importDefault(require("./routes/vendorRoutes"));
 const paymentRoutes_1 = __importDefault(require("./routes/paymentRoutes"));
 const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
+const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const config_1 = __importDefault(require("./config/config"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
-    origin: ["https://full-ecommerce-sigma.vercel.app", "http://localhost:5173"],
+    origin: (origin, callback) => {
+        const allowed = ["https://full-ecommerce-sigma.vercel.app", "http://localhost:5173"];
+        // Allow requests with no Origin (mobile apps, curl, Postman)
+        if (!origin || allowed.includes(origin))
+            return callback(null, true);
+        callback(new Error("Not allowed by CORS"));
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    credentials: true,
 }));
+const authLimiter = (0, express_rate_limit_1.default)({
+    windowMs: 15 * 60 * 1000,
+    max: 20,
+    message: { error: "Too many requests, please try again later." },
+    standardHeaders: true,
+    legacyHeaders: false,
+});
 app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_config_1.default, {
     customCss: ".swagger-ui .topbar { display: none }",
     customSiteTitle: "Product API Docs",
@@ -38,7 +53,7 @@ mongoose_1.default
 app.use("/api/products", productsRoutes_1.default);
 app.use("/api/categories", categoryRoutes_1.default);
 app.use("/api/cart", cartRoutes_1.default);
-app.use("/api/auth", authRoutes_1.default);
+app.use("/api/auth", authLimiter, authRoutes_1.default);
 app.use("/api/orders", ordersRoutes_1.default);
 app.use("/api/payment", paymentRoutes_1.default);
 app.use("/api/upload", uploadRoutes_1.default);

@@ -10,8 +10,6 @@ const Cart_1 = __importDefault(require("../models/Cart"));
 const Product_1 = __importDefault(require("../models/Product"));
 const User_1 = __importDefault(require("../models/User"));
 const emailServices_1 = require("../services/emailServices");
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
 /**
  * @swagger
  * /api/orders:
@@ -46,6 +44,10 @@ const NewOrder = async (req, res) => {
         const orderId = (0, uuid_1.v4)();
         if (!cartName) {
             return res.status(400).json({ message: "cartName is required" });
+        }
+        const expectedCart = `${req.user.username}_cart`;
+        if (req.user.role !== "admin" && cartName !== expectedCart) {
+            return res.status(403).json({ message: "Forbidden" });
         }
         const cart = await Cart_1.default.findOne({ CartName: cartName });
         if (!cart) {
@@ -122,8 +124,8 @@ exports.NewOrder = NewOrder;
  */
 const updateOrder = async (req, res) => {
     try {
-        const { orderId } = req.params;
-        const order = await orders_1.default.findOneAndUpdate({ orderId }, req.body, { new: true });
+        const orderId = req.params.orderId;
+        const order = await orders_1.default.findOneAndUpdate({ $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }] }, req.body, { new: true });
         if (!order)
             return res.status(404).json({ message: "Order not found" });
         res.status(200).json({ message: "Order updated successfully", order });
@@ -155,8 +157,8 @@ exports.updateOrder = updateOrder;
  */
 const DeleteOrder = async (req, res) => {
     try {
-        const { orderId } = req.params;
-        const deleted = await orders_1.default.findOneAndDelete({ orderId });
+        const orderId = req.params.orderId;
+        const deleted = await orders_1.default.findOneAndDelete({ $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }] });
         if (!deleted)
             return res.status(404).json({ message: "Order not found" });
         res.status(200).json({ message: "Order deleted successfully" });
@@ -174,8 +176,22 @@ const getUserOrders = async (req, res) => {
         const user = await User_1.default.findById(userId);
         if (!user)
             return res.status(404).json({ message: "User not found" });
-        const orders = await orders_1.default.find({ cartName: `${user.username}_cart` }).sort({ createdAt: -1 });
-        res.status(200).json(orders);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 5; // Smaller default for user orders on mobile
+        const skip = (page - 1) * limit;
+        const orders = await orders_1.default.find({ cartName: `${user.username}_cart` })
+            .skip(skip)
+            .limit(limit)
+            .sort({ timeOrderPlaced: -1 });
+        const total = await orders_1.default.countDocuments({ cartName: `${user.username}_cart` });
+        res.status(200).json({
+            orders,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ message: "Failed to fetch orders", error });
@@ -184,12 +200,12 @@ const getUserOrders = async (req, res) => {
 exports.getUserOrders = getUserOrders;
 const cancelOrder = async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const orderId = req.params.orderId;
         const userId = req.user?.id;
         const user = await User_1.default.findById(userId);
         if (!user)
             return res.status(404).json({ message: "User not found" });
-        const order = await orders_1.default.findOneAndUpdate({ _id: orderId, cartName: `${user.username}_cart` }, { status: "cancelled" }, { new: true });
+        const order = await orders_1.default.findOneAndUpdate({ $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }], cartName: `${user.username}_cart` }, { status: "cancelled" }, { new: true });
         if (!order)
             return res.status(404).json({ message: "Order not found or access denied" });
         try {
@@ -207,13 +223,13 @@ const cancelOrder = async (req, res) => {
 exports.cancelOrder = cancelOrder;
 const updateOrderStatus = async (req, res) => {
     try {
-        const { orderId } = req.params;
+        const orderId = req.params.orderId;
         const { status } = req.body;
         const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
         if (!validStatuses.includes(status)) {
             return res.status(400).json({ message: "Invalid status" });
         }
-        const order = await orders_1.default.findByIdAndUpdate(orderId, { status }, { new: true });
+        const order = await orders_1.default.findOneAndUpdate({ $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }] }, { status }, { new: true });
         if (!order)
             return res.status(404).json({ message: "Order not found" });
         if (status === "cancelled") {
@@ -236,8 +252,22 @@ const updateOrderStatus = async (req, res) => {
 exports.updateOrderStatus = updateOrderStatus;
 const getAllOrders = async (req, res) => {
     try {
-        const orders = await orders_1.default.find().sort({ timeOrderPlaced: -1 });
-        res.status(200).json(orders);
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+        const orders = await orders_1.default.find()
+            .skip(skip)
+            .limit(limit)
+            .sort({ timeOrderPlaced: -1 });
+        const total = await orders_1.default.countDocuments();
+        res.status(200).json({
+            orders,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+            }
+        });
     }
     catch (error) {
         res.status(500).json({ message: "Failed to fetch orders", error });

@@ -6,6 +6,6 @@ const router = (0, express_1.Router)();
 router.get("/", cartController_1.getCart);
 router.get("/:cartName", cartController_1.getCartByName);
 router.post("/", cartController_1.addToCart);
-router.delete("/", cartController_1.removeFromCart);
 router.delete("/clear", cartController_1.clearSpecificCart);
+router.delete("/", cartController_1.removeFromCart);
 exports.default = router;

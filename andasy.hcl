@@ -1,6 +1,11 @@
-app_name = "ecommerceone"
+# andasy.hcl app configuration file generated for tresore-commerce on Wednesday, 15-Apr-26 10:32:08 CAT
+#
+# See https://github.com/quarksgroup/andasy-cli for information about how to use this file.
+
+app_name = "tresore-commerce"
 
 app {
+
   env = {}
 
   port = 9000
@@ -14,6 +19,7 @@ app {
   }
 
   process {
-    name = "ecommerceone"
+    name = "tresore-commerce"
   }
+
 }

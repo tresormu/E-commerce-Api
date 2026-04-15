@@ -64,4 +64,7 @@ const OrderSchema = new mongoose_1.Schema({
     timeOrderPlaced: { type: Date, required: false, default: Date.now },
 });
 OrderSchema.index({ orderId: 1 });
+OrderSchema.index({ userId: 1 });
+OrderSchema.index({ status: 1 });
+OrderSchema.index({ timeOrderPlaced: -1 });
 exports.default = mongoose_1.default.model("orders", OrderSchema);

@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import config from "../config/config";
 import {
   welcomeEmailTemplate,
@@ -9,26 +9,10 @@ import {
   orderPaymentFailedTemplate,
 } from "../utils/emailTemplate";
 
-export const transporter = nodemailer.createTransport({
-  host: config.email.host,
-  port: config.email.port,
-  secure: config.email.port === 465,
-  auth: {
-    user: config.email.user,
-    pass: config.email.password,
-  },
-});
-
-transporter.verify((error) => {
-  if (error) {
-    console.warn("Email configuration warning:", error.message);
-  } else {
-    console.log("Email server is ready to send messages");
-  }
-});
+const resend = new Resend(config.email.apiKey);
 
 const send = (to: string, subject: string, html: string) =>
-  transporter.sendMail({ from: config.email.from, to, subject, html });
+  resend.emails.send({ from: config.email.from, to, subject, html });
 
 export const sendWelcomeEmail = (email: string, username: string) =>
   send(email, "Welcome!", welcomeEmailTemplate(username, email));

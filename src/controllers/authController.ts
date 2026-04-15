@@ -60,6 +60,10 @@ export const register = async (req: Request, res: Response) => {
     if (!username || !email || !password) {
       return res.status(400).json({ error: "All fields are required" });
     }
+    const allowedTypes = ["customer", "vendor"];
+    if (UserType && !allowedTypes.includes(UserType)) {
+      return res.status(403).json({ error: "Cannot self-register with that role" });
+    }
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({
@@ -88,7 +92,10 @@ export const register = async (req: Request, res: Response) => {
         profile: user.profile,
         username: user.username,
         email: user.email,
+        phone: user.phone || "",
         role: user.UserType,
+        notificationPrefs: user.notificationPrefs,
+        theme: user.theme,
       },
     });
   } catch (error: any) {
@@ -169,7 +176,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, role: user.UserType },
+      { id: user._id, username: user.username, role: user.UserType },
       config.jwtSecret,
       { expiresIn: config.expirationToken },
     );
@@ -182,7 +189,10 @@ export const login = async (req: Request, res: Response) => {
         profile: user.profile,
         username: user.username,
         email: user.email,
+        phone: user.phone || "",
         role: user.UserType,
+        notificationPrefs: user.notificationPrefs,
+        theme: user.theme,
       },
     });
   } catch (error) {
@@ -217,8 +227,11 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
       id: user._id,
       username: user.username,
       email: user.email,
+      phone: user.phone || "",
       profile: user.profile,
       role: user.UserType,
+      notificationPrefs: user.notificationPrefs,
+      theme: user.theme,
       createdAt: user.createdAt,
     });
   } catch {
@@ -246,7 +259,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
  */
 export const updateUser = async (req: AuthRequest, res: Response) => {
   try {
-    const { username, email } = req.body;
+    const { username, email, phone, notificationPrefs, theme } = req.body;
     const user = await User.findById(req.user!.id);
 
     if (!user) {
@@ -267,7 +280,10 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
 
     if (username) user.username = username;
     if (email) user.email = email;
+    if (phone !== undefined) user.phone = phone;
     if (imageUrl) user.profile = imageUrl;
+    if (notificationPrefs) user.notificationPrefs = { ...user.notificationPrefs, ...notificationPrefs };
+    if (theme && ['light', 'dark', 'system'].includes(theme)) user.theme = theme;
 
     await user.save();
 
@@ -277,8 +293,11 @@ export const updateUser = async (req: AuthRequest, res: Response) => {
         id: user._id,
         username: user.username,
         email: user.email,
+        phone: user.phone || "",
         profile: user.profile,
         role: user.UserType,
+        notificationPrefs: user.notificationPrefs,
+        theme: user.theme,
       },
     });
   } catch (error: any) {
@@ -391,9 +410,10 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ status: "fail", message: "Invalid or expired reset token" });
     }
 
-    user.password = await bcrypt.hash(newPassword, config.saltRounds);
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
+    // Assign plain password — the pre-save hook will hash it once
+    user.password = newPassword;
     await user.save();
 
     return res.status(200).json({
@@ -427,6 +447,52 @@ export const resetPassword = async (req: Request, res: Response) => {
  *       500:
  *         description: Failed to delete users
  */
+export const changePassword = async (req: AuthRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "currentPassword and newPassword are required" });
+    }
+    const user = await User.findById(req.user!.id);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) return res.status(401).json({ error: "Current password is incorrect" });
+
+    // Assign plain — pre-save hook hashes it
+    user.password = newPassword;
+    await user.save();
+    res.json({ message: "Password changed successfully" });
+  } catch {
+    res.status(500).json({ error: "Failed to change password" });
+  }
+};
+
+export const createAdmin = async (req: AuthRequest, res: Response) => {
+  try {
+    const { username, email, password, UserType } = req.body;
+    if (!username || !email || !password) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+    const allowedTypes = ["admin", "manager", "support"];
+    const role = allowedTypes.includes(UserType) ? UserType : "admin";
+    const existing = await User.findOne({ $or: [{ email }, { username }] });
+    if (existing) {
+      return res.status(409).json({ error: "Email or username already exists" });
+    }
+    const user = await User.create({ username, email, password, UserType: role });
+    res.status(201).json({
+      message: "Admin user created successfully",
+      user: { id: user._id, username: user.username, email: user.email, role: user.UserType },
+    });
+  } catch (error: any) {
+    if (error.code === 11000) {
+      return res.status(409).json({ error: "Email or username already exists" });
+    }
+    res.status(500).json({ error: "Failed to create admin user" });
+  }
+};
+
 export const deleteusers = async (req: AuthRequest, res: Response) => {
   try {
     await User.deleteMany({});

@@ -31,10 +31,7 @@ const config = {
 
   // Email
   email: {
-    host: requireEnv("EMAIL_HOST"),
-    port: Number(requireEnv("EMAIL_PORT")),
-    user: requireEnv("EMAIL_USER"),
-    password: requireEnv("EMAIL_PASSWORD"),
+    apiKey: requireEnv("RESEND_API_KEY"),
     from: requireEnv("EMAIL_FROM"),
   },
 

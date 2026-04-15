@@ -20,7 +20,7 @@ const config = {
     // Auth
     jwtSecret: requireEnv("JWT_SECRET"),
     adminPass: requireEnv("ADMIN_PASS"),
-    expirationToken: process.env.EXPIRATION_TOKEN,
+    expirationToken: (process.env.EXPIRATION_TOKEN),
     saltRounds: Number(process.env.SALT_ROUNDS),
     // Cloudinary
     cloudinary: {
@@ -30,10 +30,7 @@ const config = {
     },
     // Email
     email: {
-        host: requireEnv("EMAIL_HOST"),
-        port: Number(requireEnv("EMAIL_PORT")),
-        user: requireEnv("EMAIL_USER"),
-        password: requireEnv("EMAIL_PASSWORD"),
+        apiKey: requireEnv("RESEND_API_KEY"),
         from: requireEnv("EMAIL_FROM"),
     },
     // Flutterwave

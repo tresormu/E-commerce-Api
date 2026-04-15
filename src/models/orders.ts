@@ -55,4 +55,8 @@ const OrderSchema = new Schema<Order>({
 });
 
 OrderSchema.index({ orderId: 1 });
+OrderSchema.index({ userId: 1 });
+OrderSchema.index({ status: 1 });
+OrderSchema.index({ timeOrderPlaced: -1 });
+
 export default mongoose.model<Order>("orders", OrderSchema);

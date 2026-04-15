@@ -4,15 +4,14 @@
  *   name: Orders
  *   description: API for managing customer orders
  */
-import { Request, Response } from "express";
+import { Response } from "express";
 import { v4 as uuid } from "uuid";
 import Order from "../models/orders";
 import Cart from "../models/Cart";
 import Product from "../models/Product";
 import User from "../models/User";
 import { sendOrderConfirmationEmail, sendOrderCancellationEmail } from "../services/emailServices";
-import dotenv from "dotenv";
-dotenv.config();
+import { AuthRequest } from "../models/type";
 
 /**
  * @swagger
@@ -42,13 +41,18 @@ dotenv.config();
  *       500:
  *         description: Internal server error
  */
-export const NewOrder = async (req: Request, res: Response) => {
+export const NewOrder = async (req: AuthRequest, res: Response) => {
   try {
     const { cartName, customerInfo } = req.body;
     const orderId = uuid();
 
     if (!cartName) {
       return res.status(400).json({ message: "cartName is required" });
+    }
+
+    const expectedCart = `${req.user!.username}_cart`;
+    if (req.user!.role !== "admin" && cartName !== expectedCart) {
+      return res.status(403).json({ message: "Forbidden" });
     }
 
     const cart = await Cart.findOne({ CartName: cartName });
@@ -134,10 +138,14 @@ export const NewOrder = async (req: Request, res: Response) => {
  *       500:
  *         description: Internal server error
  */
-export const updateOrder = async (req: Request, res: Response) => {
+export const updateOrder = async (req: AuthRequest, res: Response) => {
   try {
-    const { orderId } = req.params;
-    const order = await Order.findOneAndUpdate({ orderId }, req.body, { new: true });
+    const orderId = req.params.orderId as string;
+    const order = await Order.findOneAndUpdate(
+      { $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }] },
+      req.body,
+      { new: true },
+    );
     if (!order) return res.status(404).json({ message: "Order not found" });
     res.status(200).json({ message: "Order updated successfully", order });
   } catch (error) {
@@ -165,10 +173,12 @@ export const updateOrder = async (req: Request, res: Response) => {
  *       500:
  *         description: Internal server error
  */
-export const DeleteOrder = async (req: Request, res: Response) => {
+export const DeleteOrder = async (req: AuthRequest, res: Response) => {
   try {
-    const { orderId } = req.params;
-    const deleted = await Order.findOneAndDelete({ orderId });
+    const orderId = req.params.orderId as string;
+    const deleted = await Order.findOneAndDelete(
+      { $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }] },
+    );
     if (!deleted) return res.status(404).json({ message: "Order not found" });
     res.status(200).json({ message: "Order deleted successfully" });
   } catch (error) {
@@ -176,31 +186,48 @@ export const DeleteOrder = async (req: Request, res: Response) => {
   }
 };
 
-export const getUserOrders = async (req: Request, res: Response) => {
+export const getUserOrders = async (req: AuthRequest, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     if (!userId) return res.status(401).json({ message: "User not authenticated" });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    const orders = await Order.find({ cartName: `${user.username}_cart` }).sort({ createdAt: -1 });
-    res.status(200).json(orders);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 5; // Smaller default for user orders on mobile
+    const skip = (page - 1) * limit;
+
+    const orders = await Order.find({ cartName: `${user.username}_cart` })
+      .skip(skip)
+      .limit(limit)
+      .sort({ timeOrderPlaced: -1 });
+
+    const total = await Order.countDocuments({ cartName: `${user.username}_cart` });
+
+    res.status(200).json({
+      orders,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch orders", error });
   }
 };
 
-export const cancelOrder = async (req: Request, res: Response) => {
+export const cancelOrder = async (req: AuthRequest, res: Response) => {
   try {
-    const { orderId } = req.params;
-    const userId = (req as any).user?.id;
+    const orderId = req.params.orderId as string;
+    const userId = req.user?.id;
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const order = await Order.findOneAndUpdate(
-      { _id: orderId, cartName: `${user.username}_cart` },
+      { $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }], cartName: `${user.username}_cart` },
       { status: "cancelled" },
       { new: true },
     );
@@ -218,9 +245,9 @@ export const cancelOrder = async (req: Request, res: Response) => {
   }
 };
 
-export const updateOrderStatus = async (req: Request, res: Response) => {
+export const updateOrderStatus = async (req: AuthRequest, res: Response) => {
   try {
-    const { orderId } = req.params;
+    const orderId = req.params.orderId as string;
     const { status } = req.body;
 
     const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
@@ -228,7 +255,11 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid status" });
     }
 
-    const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
+    const order = await Order.findOneAndUpdate(
+      { $or: [{ orderId }, { _id: /^[a-f0-9]{24}$/i.test(orderId) ? orderId : undefined }] },
+      { status },
+      { new: true },
+    );
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     if (status === "cancelled") {
@@ -248,10 +279,27 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllOrders = async (req: Request, res: Response) => {
+export const getAllOrders = async (req: AuthRequest, res: Response) => {
   try {
-    const orders = await Order.find().sort({ timeOrderPlaced: -1 });
-    res.status(200).json(orders);
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const skip = (page - 1) * limit;
+
+    const orders = await Order.find()
+      .skip(skip)
+      .limit(limit)
+      .sort({ timeOrderPlaced: -1 });
+
+    const total = await Order.countDocuments();
+
+    res.status(200).json({
+      orders,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch orders", error });
   }

@@ -24,9 +24,35 @@ const currencyConverter_1 = require("../utils/currencyConverter");
  *       200:
  *         description: List of products
  */
-const getProducts = async (_, res) => {
-    const products = await Product_1.default.find().populate("category");
-    res.json(products);
+const getProducts = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 12;
+        const skip = (page - 1) * limit;
+        const search = req.query.search?.trim();
+        const filter = {};
+        if (search) {
+            const regex = new RegExp(search, "i");
+            filter.$or = [{ name: regex }, { description: regex }];
+        }
+        const products = await Product_1.default.find(filter)
+            .populate("category")
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+        const total = await Product_1.default.countDocuments(filter);
+        res.json({
+            products,
+            pagination: {
+                total,
+                page,
+                pages: Math.ceil(total / limit),
+            }
+        });
+    }
+    catch (error) {
+        res.status(500).json({ error: "Failed to fetch products" });
+    }
 };
 exports.getProducts = getProducts;
 /**

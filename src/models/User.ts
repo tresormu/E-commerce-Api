@@ -7,10 +7,13 @@ export interface IUser extends Document {
   username: string;
   profile?: string;
   email: string;
+  phone?: string;
   password: string;
   UserType: UserRole;
   resetPasswordToken?: String;
   resetPasswordExpires?: Date;
+  notificationPrefs?: { orders: boolean; promotions: boolean; updates: boolean };
+  theme?: 'light' | 'dark' | 'system';
   createdAt: Date;
 }
 const UserSchema = new Schema<IUser>(
@@ -18,6 +21,7 @@ const UserSchema = new Schema<IUser>(
     username: { type: String, required: true, unique: true },
     profile: { type: String, default: "" },
     email: { type: String, required: true, unique: true },
+    phone: { type: String, default: "" },
     password: { type: String, required: true },
     UserType: {
       type: String,
@@ -26,6 +30,11 @@ const UserSchema = new Schema<IUser>(
     },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    notificationPrefs: {
+      type: { orders: Boolean, promotions: Boolean, updates: Boolean },
+      default: { orders: true, promotions: true, updates: true },
+    },
+    theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
   },
   { timestamps: true },
 );

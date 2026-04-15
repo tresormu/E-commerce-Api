@@ -42,6 +42,7 @@ const UserSchema = new mongoose_1.Schema({
     username: { type: String, required: true, unique: true },
     profile: { type: String, default: "" },
     email: { type: String, required: true, unique: true },
+    phone: { type: String, default: "" },
     password: { type: String, required: true },
     UserType: {
         type: String,
@@ -50,6 +51,11 @@ const UserSchema = new mongoose_1.Schema({
     },
     resetPasswordToken: { type: String },
     resetPasswordExpires: { type: Date },
+    notificationPrefs: {
+        type: { orders: Boolean, promotions: Boolean, updates: Boolean },
+        default: { orders: true, promotions: true, updates: true },
+    },
+    theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
 }, { timestamps: true });
 UserSchema.pre("save", async function () {
     if (!this.isModified("password"))

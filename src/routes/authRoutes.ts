@@ -10,6 +10,8 @@ import {
   forgotPassword,
   AllUsers,
   deleteusers,
+  changePassword,
+  createAdmin,
 } from "../controllers/authController";
 import { protect } from "../middleware/authMiddleware";
 import { upload } from "../middleware/cloudinary.middleware";
@@ -26,4 +28,6 @@ router.delete("/",
   deleteusers)
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
+router.post('/change-password', protect, changePassword);
+router.post('/admin/create', protect, authorizeRoles('admin'), createAdmin);
 export default router;

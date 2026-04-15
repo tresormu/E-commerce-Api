@@ -9,7 +9,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteusers = exports.resetPassword = exports.forgotPassword = exports.deleteAccount = exports.updateUser = exports.getProfile = exports.login = exports.AllUsers = exports.register = void 0;
+exports.deleteusers = exports.createAdmin = exports.changePassword = exports.resetPassword = exports.forgotPassword = exports.deleteAccount = exports.updateUser = exports.getProfile = exports.login = exports.AllUsers = exports.register = void 0;
 const emailServices_1 = require("../services/emailServices");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
@@ -61,6 +61,10 @@ const register = async (req, res) => {
         if (!username || !email || !password) {
             return res.status(400).json({ error: "All fields are required" });
         }
+        const allowedTypes = ["customer", "vendor"];
+        if (UserType && !allowedTypes.includes(UserType)) {
+            return res.status(403).json({ error: "Cannot self-register with that role" });
+        }
         const existingUser = await User_1.default.findOne({ email });
         if (existingUser) {
             return res.status(409).json({
@@ -89,7 +93,10 @@ const register = async (req, res) => {
                 profile: user.profile,
                 username: user.username,
                 email: user.email,
+                phone: user.phone || "",
                 role: user.UserType,
+                notificationPrefs: user.notificationPrefs,
+                theme: user.theme,
             },
         });
     }
@@ -168,7 +175,7 @@ const login = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ error: "Invalid credentials" });
         }
-        const token = jsonwebtoken_1.default.sign({ id: user._id, role: user.UserType }, config_1.default.jwtSecret, { expiresIn: config_1.default.expirationToken });
+        const token = jsonwebtoken_1.default.sign({ id: user._id, username: user.username, role: user.UserType }, config_1.default.jwtSecret, { expiresIn: config_1.default.expirationToken });
         res.json({
             message: "Login successful",
             token,
@@ -177,12 +184,15 @@ const login = async (req, res) => {
                 profile: user.profile,
                 username: user.username,
                 email: user.email,
+                phone: user.phone || "",
                 role: user.UserType,
+                notificationPrefs: user.notificationPrefs,
+                theme: user.theme,
             },
         });
     }
     catch (error) {
-        console.error("LOGIN ERROR 👉", error);
+        console.error("LOGIN ERROR ", error);
         return res.status(500).json({ error: "Login failed" });
     }
 };
@@ -213,8 +223,11 @@ const getProfile = async (req, res) => {
             id: user._id,
             username: user.username,
             email: user.email,
+            phone: user.phone || "",
             profile: user.profile,
             role: user.UserType,
+            notificationPrefs: user.notificationPrefs,
+            theme: user.theme,
             createdAt: user.createdAt,
         });
     }
@@ -243,7 +256,7 @@ exports.getProfile = getProfile;
  */
 const updateUser = async (req, res) => {
     try {
-        const { username, email } = req.body;
+        const { username, email, phone, notificationPrefs, theme } = req.body;
         const user = await User_1.default.findById(req.user.id);
         if (!user) {
             return res.status(404).json({ error: "User not found" });
@@ -262,8 +275,14 @@ const updateUser = async (req, res) => {
             user.username = username;
         if (email)
             user.email = email;
+        if (phone !== undefined)
+            user.phone = phone;
         if (imageUrl)
             user.profile = imageUrl;
+        if (notificationPrefs)
+            user.notificationPrefs = { ...user.notificationPrefs, ...notificationPrefs };
+        if (theme && ['light', 'dark', 'system'].includes(theme))
+            user.theme = theme;
         await user.save();
         res.json({
             message: "Profile updated successfully",
@@ -271,8 +290,11 @@ const updateUser = async (req, res) => {
                 id: user._id,
                 username: user.username,
                 email: user.email,
+                phone: user.phone || "",
                 profile: user.profile,
                 role: user.UserType,
+                notificationPrefs: user.notificationPrefs,
+                theme: user.theme,
             },
         });
     }
@@ -379,9 +401,10 @@ const resetPassword = async (req, res) => {
         if (!user) {
             return res.status(400).json({ status: "fail", message: "Invalid or expired reset token" });
         }
-        user.password = await bcryptjs_1.default.hash(newPassword, config_1.default.saltRounds);
         user.resetPasswordToken = undefined;
         user.resetPasswordExpires = undefined;
+        // Assign plain password — the pre-save hook will hash it once
+        user.password = newPassword;
         await user.save();
         return res.status(200).json({
             status: "success",
@@ -415,6 +438,54 @@ exports.resetPassword = resetPassword;
  *       500:
  *         description: Failed to delete users
  */
+const changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: "currentPassword and newPassword are required" });
+        }
+        const user = await User_1.default.findById(req.user.id);
+        if (!user)
+            return res.status(404).json({ error: "User not found" });
+        const isMatch = await bcryptjs_1.default.compare(currentPassword, user.password);
+        if (!isMatch)
+            return res.status(401).json({ error: "Current password is incorrect" });
+        // Assign plain — pre-save hook hashes it
+        user.password = newPassword;
+        await user.save();
+        res.json({ message: "Password changed successfully" });
+    }
+    catch {
+        res.status(500).json({ error: "Failed to change password" });
+    }
+};
+exports.changePassword = changePassword;
+const createAdmin = async (req, res) => {
+    try {
+        const { username, email, password, UserType } = req.body;
+        if (!username || !email || !password) {
+            return res.status(400).json({ error: "All fields are required" });
+        }
+        const allowedTypes = ["admin", "manager", "support"];
+        const role = allowedTypes.includes(UserType) ? UserType : "admin";
+        const existing = await User_1.default.findOne({ $or: [{ email }, { username }] });
+        if (existing) {
+            return res.status(409).json({ error: "Email or username already exists" });
+        }
+        const user = await User_1.default.create({ username, email, password, UserType: role });
+        res.status(201).json({
+            message: "Admin user created successfully",
+            user: { id: user._id, username: user.username, email: user.email, role: user.UserType },
+        });
+    }
+    catch (error) {
+        if (error.code === 11000) {
+            return res.status(409).json({ error: "Email or username already exists" });
+        }
+        res.status(500).json({ error: "Failed to create admin user" });
+    }
+};
+exports.createAdmin = createAdmin;
 const deleteusers = async (req, res) => {
     try {
         await User_1.default.deleteMany({});

@@ -67,12 +67,8 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
   try {
     const { CartName, ProductName, quantity } = req.body;
 
-    // // now TS knows req.user exists
-
-    console.log(req.user);
-
-    if (!ProductName) {
-      return res.status(400).json({ error: " the inputs are not valid" });
+    if (!CartName || !ProductName) {
+      return res.status(400).json({ error: "CartName and ProductName are required" });
     }
 
     const productExists = await Product.findOne({ name: ProductName });
@@ -80,20 +76,30 @@ export const addToCart = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    // create cart item with owner
-    const newItem = new Cart({
-      CartName,
-      productDet: [
-        {
-          ProductName,
-          quantity: quantity || 1,
-        },
-      ],
-      addedAt: new Date(),
-    });
+    const cart = await Cart.findOne({ CartName });
+    if (!cart) {
+      const newCart = await Cart.create({
+        CartName,
+        productDet: [
+          {
+            ProductName,
+            quantity: quantity || 1,
+          },
+        ],
+        addedAt: new Date(),
+      });
+      return res.status(201).json(newCart);
+    }
 
-    await newItem.save();
-    res.status(201).json(newItem);
+    const existing = cart.productDet.find((item) => item.ProductName === ProductName);
+    if (existing) {
+      existing.quantity += quantity || 1;
+    } else {
+      cart.productDet.push({ ProductName, quantity: quantity || 1 });
+    }
+
+    await cart.save();
+    res.status(200).json(cart);
   } catch (error: any) {
     res.status(400).json({ error: error.message });
   }
@@ -144,6 +150,11 @@ export const removeFromCart = async (req: Request, res: Response) => {
       return res
         .status(404)
         .json({ error: "Cart not found or product not in cart" });
+    }
+
+    if (updatedCart.productDet.length === 0) {
+      await Cart.deleteOne({ _id: updatedCart._id });
+      return res.status(200).json({ message: "Cart cleared successfully" });
     }
 
     return res.status(200).json({

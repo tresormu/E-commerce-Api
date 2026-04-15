@@ -3,28 +3,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendOrderPaymentFailedEmail = exports.sendOrderPaymentSuccessEmail = exports.sendOrderCancellationEmail = exports.sendOrderConfirmationEmail = exports.sendPasswordResetEmail = exports.sendWelcomeEmail = exports.transporter = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
+exports.sendOrderPaymentFailedEmail = exports.sendOrderPaymentSuccessEmail = exports.sendOrderCancellationEmail = exports.sendOrderConfirmationEmail = exports.sendPasswordResetEmail = exports.sendWelcomeEmail = void 0;
+const resend_1 = require("resend");
 const config_1 = __importDefault(require("../config/config"));
 const emailTemplate_1 = require("../utils/emailTemplate");
-exports.transporter = nodemailer_1.default.createTransport({
-    host: config_1.default.email.host,
-    port: config_1.default.email.port,
-    secure: config_1.default.email.port === 465,
-    auth: {
-        user: config_1.default.email.user,
-        pass: config_1.default.email.password,
-    },
-});
-exports.transporter.verify((error) => {
-    if (error) {
-        console.warn("Email configuration warning:", error.message);
-    }
-    else {
-        console.log("Email server is ready to send messages");
-    }
-});
-const send = (to, subject, html) => exports.transporter.sendMail({ from: config_1.default.email.from, to, subject, html });
+const resend = new resend_1.Resend(config_1.default.email.apiKey);
+const send = (to, subject, html) => resend.emails.send({ from: config_1.default.email.from, to, subject, html });
 const sendWelcomeEmail = (email, username) => send(email, "Welcome!", (0, emailTemplate_1.welcomeEmailTemplate)(username, email));
 exports.sendWelcomeEmail = sendWelcomeEmail;
 const sendPasswordResetEmail = (email, username, token) => send(email, "Password Reset Request", (0, emailTemplate_1.passwordResetTemplate)(username, token));

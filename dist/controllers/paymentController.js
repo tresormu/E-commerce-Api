@@ -80,7 +80,7 @@ const createCheckoutSession = async (req, res) => {
         if (!req.user) {
             return res.status(401).json({ message: "Unauthorized" });
         }
-        const { orderId, callbackUrl, customerName, customerEmail, customerPhone } = req.body || {};
+        const { orderId, callbackUrl, customerName, customerEmail, customerPhone, paymentMethod, momoPhone } = req.body || {};
         if (!orderId) {
             return res.status(400).json({ message: "orderId is required" });
         }
@@ -146,22 +146,39 @@ const createCheckoutSession = async (req, res) => {
                 .json({ message: "Order payment is already in progress" });
         }
         claimedOrderId = claimedOrder._id.toString();
+        const isMomo = paymentMethod === "momo" && momoPhone;
         const payload = {
             tx_ref: txRef,
             amount,
             currency: config.currency || "RWF",
             redirect_url: redirectUrl,
-            customer: {
-                email: customerEmail || order.customerInfo?.email || user.email,
-                name: customerName || order.customerInfo?.name || user.username,
-                phonenumber: customerPhone || order.customerInfo?.phone,
-            },
-            meta: {
-                orderId: order.orderId || order._id.toString(),
-                orderDbId: order._id.toString(),
-                userId: user._id.toString(),
-                cartName: order.cartName,
-            },
+            payment_options: isMomo ? "mobilemoneyrwanda,mobilemoneyuganda,mobilemoneyghana" : "card",
+            ...(isMomo && {
+                meta: {
+                    orderId: order.orderId || order._id.toString(),
+                    orderDbId: order._id.toString(),
+                    userId: user._id.toString(),
+                    cartName: order.cartName,
+                },
+                customer: {
+                    email: customerEmail || order.customerInfo?.email || user.email,
+                    name: customerName || order.customerInfo?.name || user.username,
+                    phonenumber: momoPhone,
+                },
+            }),
+            ...(!isMomo && {
+                meta: {
+                    orderId: order.orderId || order._id.toString(),
+                    orderDbId: order._id.toString(),
+                    userId: user._id.toString(),
+                    cartName: order.cartName,
+                },
+                customer: {
+                    email: customerEmail || order.customerInfo?.email || user.email,
+                    name: customerName || order.customerInfo?.name || user.username,
+                    phonenumber: customerPhone || order.customerInfo?.phone,
+                },
+            }),
             customizations: {
                 title: "E-commerce Order Payment",
                 description: `Payment for order ${order.orderId || order._id.toString()}`,

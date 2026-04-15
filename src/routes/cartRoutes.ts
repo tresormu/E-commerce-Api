@@ -12,7 +12,7 @@ const router = Router();
 router.get("/", getCart);
 router.get("/:cartName", getCartByName);
 router.post("/", addToCart);
-router.delete("/", removeFromCart);
 router.delete("/clear", clearSpecificCart);
+router.delete("/", removeFromCart);
 
 export default router;

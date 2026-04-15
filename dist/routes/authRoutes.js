@@ -15,4 +15,6 @@ router.delete("/account", authMiddleware_1.protect, authController_1.deleteAccou
 router.delete("/", authMiddleware_1.protect, (0, authorize_1.authorizeRoles)("admin"), authController_1.deleteusers);
 router.post('/forgot-password', authController_1.forgotPassword);
 router.post('/reset-password', authController_1.resetPassword);
+router.post('/change-password', authMiddleware_1.protect, authController_1.changePassword);
+router.post('/admin/create', authMiddleware_1.protect, (0, authorize_1.authorizeRoles)('admin'), authController_1.createAdmin);
 exports.default = router;

@@ -22,9 +22,38 @@ import { convertFromUSD } from "../utils/currencyConverter";
  *       200:
  *         description: List of products
  */
-export const getProducts = async (_: any, res: Response) => {
-  const products = await Product.find().populate("category");
-  res.json(products);
+export const getProducts = async (req: AuthRequest, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 12;
+    const skip = (page - 1) * limit;
+    const search = (req.query.search as string | undefined)?.trim();
+
+    const filter: Record<string, any> = {};
+    if (search) {
+      const regex = new RegExp(search, "i");
+      filter.$or = [{ name: regex }, { description: regex }];
+    }
+
+    const products = await Product.find(filter)
+      .populate("category")
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await Product.countDocuments(filter);
+
+    res.json({
+      products,
+      pagination: {
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch products" });
+  }
 };
 
 /**
