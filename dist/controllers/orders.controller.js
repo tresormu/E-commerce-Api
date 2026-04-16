@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllOrders = exports.updateOrderStatus = exports.cancelOrder = exports.getUserOrders = exports.DeleteOrder = exports.updateOrder = exports.NewOrder = void 0;
-const uuid_1 = require("uuid");
+const crypto_1 = require("crypto");
 const orders_1 = __importDefault(require("../models/orders"));
 const Cart_1 = __importDefault(require("../models/Cart"));
 const Product_1 = __importDefault(require("../models/Product"));
@@ -41,7 +41,7 @@ const emailServices_1 = require("../services/emailServices");
 const NewOrder = async (req, res) => {
     try {
         const { cartName, customerInfo } = req.body;
-        const orderId = (0, uuid_1.v4)();
+        const orderId = (0, crypto_1.randomUUID)();
         if (!cartName) {
             return res.status(400).json({ message: "cartName is required" });
         }

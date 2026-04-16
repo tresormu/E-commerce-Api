@@ -27,5 +27,5 @@ FROM base
 ENV NODE_ENV=production
 COPY --from=build /app /app
 
-EXPOSE 8080
-CMD ["npm", "run", "start"]
+EXPOSE 5000
+CMD ["node", "dist/server.js"]

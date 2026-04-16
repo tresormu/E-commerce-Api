@@ -1,3 +1,4 @@
+import dns from "dns";
 import express from "express";
 import mongoose from "mongoose";
 import productRoutes from "./routes/productsRoutes";
@@ -15,6 +16,13 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import config from "./config/config";
+
+if (config.mongoUrl.startsWith("mongodb+srv://")) {
+  const dnsServers = config.dnsServers ?? ["8.8.8.8", "1.1.1.1"];
+  dns.setServers(dnsServers);
+  dns.setDefaultResultOrder("ipv4first");
+  console.log(`Using DNS servers for SRV resolution: ${dnsServers.join(", ")}`);
+}
 
 const app = express();
 app.use(express.json({ limit: '10mb' }));
@@ -35,7 +43,7 @@ app.use(
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: 100,
   message: { error: "Too many requests, please try again later." },
   standardHeaders: true,
   legacyHeaders: false,
@@ -49,11 +57,6 @@ app.use(
   }),
 );
 
-mongoose
-  .connect(config.mongoUrl)
-  .then(() => console.log(" Connected to MongoDB Compass"))
-  .catch((err) => console.error(" Connection error:", err));
-
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/cart", cartRoutes);
@@ -64,6 +67,19 @@ app.use("/api/upload", UploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/vendor", vendorRoutes);
 
-app.listen(config.port, () => {
-  console.log(`Server is running on http://localhost:${config.port}`);
-});
+mongoose
+  .connect(config.mongoUrl, {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 30000,
+    family: 4,
+  })
+  .then(() => {
+    console.log("Connected to MongoDB Compass");
+    app.listen(config.port, () => {
+      console.log(`Server is running on http://localhost:${config.port}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Connection error:", err);
+    process.exit(1);
+  });

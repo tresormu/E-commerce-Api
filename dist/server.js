@@ -3,6 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+const dns_1 = __importDefault(require("dns"));
 const express_1 = __importDefault(require("express"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const productsRoutes_1 = __importDefault(require("./routes/productsRoutes"));
@@ -20,6 +21,12 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 const config_1 = __importDefault(require("./config/config"));
+if (config_1.default.mongoUrl.startsWith("mongodb+srv://")) {
+    const dnsServers = config_1.default.dnsServers ?? ["8.8.8.8", "1.1.1.1"];
+    dns_1.default.setServers(dnsServers);
+    dns_1.default.setDefaultResultOrder("ipv4first");
+    console.log(`Using DNS servers for SRV resolution: ${dnsServers.join(", ")}`);
+}
 const app = (0, express_1.default)();
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true, limit: '10mb' }));
@@ -37,7 +44,7 @@ app.use((0, cors_1.default)({
 }));
 const authLimiter = (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000,
-    max: 20,
+    max: 100,
     message: { error: "Too many requests, please try again later." },
     standardHeaders: true,
     legacyHeaders: false,
@@ -46,10 +53,6 @@ app.use("/api-docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.de
     customCss: ".swagger-ui .topbar { display: none }",
     customSiteTitle: "Product API Docs",
 }));
-mongoose_1.default
-    .connect(config_1.default.mongoUrl)
-    .then(() => console.log(" Connected to MongoDB Compass"))
-    .catch((err) => console.error(" Connection error:", err));
 app.use("/api/products", productsRoutes_1.default);
 app.use("/api/categories", categoryRoutes_1.default);
 app.use("/api/cart", cartRoutes_1.default);
@@ -59,6 +62,19 @@ app.use("/api/payment", paymentRoutes_1.default);
 app.use("/api/upload", uploadRoutes_1.default);
 app.use("/api/admin", adminRoutes_1.default);
 app.use("/api/vendor", vendorRoutes_1.default);
-app.listen(config_1.default.port, () => {
-    console.log(`Server is running on http://localhost:${config_1.default.port}`);
+mongoose_1.default
+    .connect(config_1.default.mongoUrl, {
+    serverSelectionTimeoutMS: 30000,
+    socketTimeoutMS: 30000,
+    family: 4,
+})
+    .then(() => {
+    console.log("Connected to MongoDB Compass");
+    app.listen(config_1.default.port, () => {
+        console.log(`Server is running on http://localhost:${config_1.default.port}`);
+    });
+})
+    .catch((err) => {
+    console.error("Connection error:", err);
+    process.exit(1);
 });

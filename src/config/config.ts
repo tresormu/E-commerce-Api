@@ -8,13 +8,20 @@ const requireEnv = (key: string): string => {
   return value;
 };
 
+const parseDnsServers = (): string[] | undefined => {
+  const raw = process.env.DNS_SERVERS;
+  if (!raw) return undefined;
+  const servers = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  return servers.length > 0 ? servers : undefined;
+};
+
 const config = {
   // Server
-  port: Number(process.env.PORT),
+  port: Number(requireEnv("PORT")),
+  dnsServers: parseDnsServers(),
 
   // Database
   mongoUrl: requireEnv("MONGO_URL"),
-  oldMongoUrl: requireEnv("OLD_MONGO_URL"),
 
   // Auth
   jwtSecret: requireEnv("JWT_SECRET"),
