@@ -31,9 +31,16 @@ app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowed = ["https://full-ecommerce-sigma.vercel.app", "http://localhost:5173"];
-      // Allow requests with no Origin (mobile apps, curl, Postman)
-      if (!origin || allowed.includes(origin)) return callback(null, true);
+      const allowed = [
+        "https://full-ecommerce-sigma.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175"
+      ];
+      // Allow requests with no Origin (mobile apps) or from localhost in development
+      if (!origin || allowed.includes(origin) || origin.startsWith("http://localhost:")) {
+        return callback(null, true);
+      }
       callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -66,6 +73,14 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/upload", UploadRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/vendor", vendorRoutes);
+
+// Global Error Handler
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    error: err.message || "Internal Server Error",
+  });
+});
 
 mongoose
   .connect(config.mongoUrl, {
